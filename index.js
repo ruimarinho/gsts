@@ -125,7 +125,7 @@ async function writeCredentials(profile, { accessKeyId, secretAccessKey, expirat
       return;
     }
 
-    if (/ServiceLogin|initsso/.test(request.url())) {
+    if (/google|gstatic|youtube/.test(request.url())) {
       request.continue();
       return;
     }
