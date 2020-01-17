@@ -161,7 +161,7 @@ async function writeCredentials(profile, { accessKeyId, secretAccessKey, expirat
     log('User is not authenticated, spawning headful instance');
 
     const spawn = require('child_process').spawn;
-    const ui = spawn('node', ['index.js', '--headful'], { stdio: 'inherit' });
+    const ui = spawn('gsts', ['--headful'], { stdio: 'inherit' });
     ui.on('close', code => log(`Headful instance has exited with code ${code}`))
   }
 
