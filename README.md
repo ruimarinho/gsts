@@ -1,4 +1,4 @@
-# gsts
+![gsts](images/logo/cover.png)
 
 `gsts` (short for `Google STS`) is a fork of [aws-google-auth](https://github.com/cevoaustralia/aws-google-auth) (the original project) based on [puppeteer](https://pptr.dev) which aims to obtain and store AWS STS credentials to interact with Amazon services by authenticating against a pre-configured GSuite SAML instance.
 

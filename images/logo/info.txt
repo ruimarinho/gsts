@@ -1,0 +1,14 @@
+
+Hope you enjoy your new logo, here are the people that
+made your beautiful logo happen :)
+font name: officecodeprod-regular
+font link: https://github.com/nathco/Office-Code-Pro
+font author: Nathan Rutzky
+font author site: https://nath.co/
+
+
+icon designer: ibrandify
+icon designer link: /ibrandify
+        
+{"bg":"transparent","icon-gradient-0":"#20484F","icon-gradient-1":"#4E9BAB","font":"#000000","slogan":"#141414"}
+      
