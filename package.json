@@ -10,7 +10,8 @@
   },
   "bin": "./index.js",
   "files": [
-    "index.js"
+    "index.js",
+    "logger.js"
   ],
   "keywords": [
     "google",
