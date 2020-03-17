@@ -239,7 +239,7 @@ async function cleanDirectory(path) {
  */
 
 function generateLaunchAgentPlist(idpId, spId, username, outLogPath, errorLogPath) {
-  const programArguments = ['gsts', `--idp-id=${idpId}`, `--sp-id=${spId}`]
+  const programArguments = ['/usr/local/bin/gsts', `--idp-id=${idpId}`, `--sp-id=${spId}`]
 
   if (username) {
     programArguments.push(`--username=${username}`);
@@ -247,6 +247,9 @@ function generateLaunchAgentPlist(idpId, spId, username, outLogPath, errorLogPat
 
   const payload = {
     Label: PROJECT_NAMESPACE,
+    EnvironmentVariables: {
+      PATH: '/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin'
+    },
     RunAtLoad: true,
     StartInterval: 600,
     StandardErrorPath: errorLogPath,
