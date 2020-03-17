@@ -406,7 +406,7 @@ async function openConsole(url) {
   if (!isAuthenticated && !argv.headful) {
     logger.info('User is not authenticated, spawning headful instance');
 
-    const args = ['index.js', '--headful'];
+    const args = ['gsts', '--headful'];
 
     if (argv.force) {
       args.push('--force');
