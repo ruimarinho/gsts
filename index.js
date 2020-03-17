@@ -207,6 +207,12 @@ async function saveCredentials(profile, { accessKeyId, secretAccessKey, expirati
 async function getSessionExpirationForProfileCredentials(path, profile) {
   const credentials = await loadCredentials(path, profile);
 
+  if (!credentials) {
+    logger.debug('Credentials not found');
+
+    return { isValid: false, expiresAt: null };
+  }
+
   if (!credentials.aws_session_expiration) {
     logger.debug('Session expiration date not found');
 
