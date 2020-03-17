@@ -344,6 +344,8 @@ async function openConsole(url) {
   }
 
   if (argv.clean) {
+    logger.debug('Cleaning directory %s', paths.data);
+
     await cleanDirectory(paths.data);
   }
 
