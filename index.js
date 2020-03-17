@@ -129,8 +129,8 @@ async function processSamlResponse(details, { profile, role }) {
   logger.debug('Parsed SAML assertion %O', saml.parsedSaml);
 
   const attribute = saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role')[0];
-	const roleArn = role || attribute.match(REGEX_PATTERN_ROLE)[0];
-	const principalArn = attribute.match(REGEX_PATTERN_PRINCIPAL)[0];
+  const roleArn = role || attribute.match(REGEX_PATTERN_ROLE)[0];
+  const principalArn = attribute.match(REGEX_PATTERN_PRINCIPAL)[0];
 
   let sessionDuration = DEFAULT_SESSION_DURATION;
 
@@ -151,7 +151,7 @@ async function processSamlResponse(details, { profile, role }) {
     PrincipalArn: principalArn,
     RoleArn: roleArn,
     SAMLAssertion: samlAssertion
-	}).promise();
+  }).promise();
 
   logger.debug('Role has been assumed %O', response);
 
