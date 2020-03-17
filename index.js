@@ -393,19 +393,20 @@ async function openConsole(url) {
   await page.goto(`https://accounts.google.com/o/saml2/initsso?idpid=${argv.googleIdpId}&spid=${argv.googleSpId}&forceauthn=false`);
 
   if (argv.headful) {
-    await page.waitFor('input[type=email]');
-    const selector = await page.$('input[type=email]');
-
-    if (argv.username) {
-      logger.debug('Pre-filling email with %s', argv.username);
-
-      await selector.type(argv.username);
-    }
-
     try {
+      await page.waitFor('input[type=email]');
+
+      const selector = await page.$('input[type=email]');
+
+      if (argv.username) {
+        logger.debug('Pre-filling email with %s', argv.username);
+
+        await selector.type(argv.username);
+      }
+
       await page.waitForResponse('https://signin.aws.amazon.com/saml');
     } catch (e) {
-      if (e.message === 'Target closed') {
+      if (/Target closed/.test(e.message)) {
         logger.error('Browser closed outside running context, exiting');
         return;
       }
