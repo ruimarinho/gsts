@@ -352,7 +352,7 @@ async function openConsole(url) {
   let isAuthenticated = false;
   let { isValid: isSessionValid, expiresAt: sessionExpiresAt } = await getSessionExpirationForProfileCredentials(AWS_CREDENTIALS_FILE, argv.awsProfile);
 
-  if (!argv.force && isSessionValid) {
+  if (!argv.clean && !argv.force && isSessionValid) {
     logger.info('Skipping re-authorization as session is valid until %s. Use --force to ignore.', new Date(sessionExpiresAt));
 
     isAuthenticated = true;
@@ -421,6 +421,10 @@ async function openConsole(url) {
 
     if (argv.force) {
       args.push('--force');
+    }
+
+    if (argv.clean) {
+      args.push('--clean');
     }
 
     const ui = childProcess.spawn('node', args, { stdio: 'inherit' });
