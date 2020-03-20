@@ -433,7 +433,7 @@ async function openConsole(url) {
   if (!isAuthenticated && !argv.headful) {
     logger.info('User is not authenticated, spawning headful instance');
 
-    const args = ['gsts', '--headful'];
+    const args = ['--headful'];
 
     if (argv.force) {
       args.push('--force');
@@ -443,7 +443,7 @@ async function openConsole(url) {
       args.push('--clean');
     }
 
-    const ui = childProcess.spawn('node', args, { stdio: 'inherit' });
+    const ui = childProcess.spawn('gsts', args, { stdio: 'inherit' });
 
     ui.on('close', code => logger.debug(`Headful instance has exited with code ${code}`))
   }
