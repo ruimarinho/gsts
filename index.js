@@ -20,9 +20,6 @@ const puppeteer = require('puppeteer-extra');
 const stealth = require('puppeteer-extra-plugin-stealth');
 const trash = require('trash');
 
-// AWS Credentials file path (multi-platform support).
-const AWS_CREDENTIALS_FILE = path.join(homedir, '.aws', 'credentials');
-
 // Default session duration, as states on AWS documentation.
 // See https://aws.amazon.com/blogs/security/enable-federated-api-access-to-your-aws-resources-for-up-to-12-hours-using-iam-roles/.
 const DEFAULT_SESSION_DURATION = 3600 // 1 hour
@@ -57,6 +54,10 @@ const argv = require('yargs')
     },
     'aws-role-arn': {
       description: 'AWS role ARN to authenticate with'
+    },
+    'aws-shared-credentials-file': {
+      description: 'AWS shared credentials file',
+      default: path.join(homedir, '.aws', 'credentials')
     },
     'clean': {
       boolean: false,
@@ -122,8 +123,8 @@ const logger = new Logger(process.stdout, process.stderr, argv.verbose);
  * STS token.
  */
 
-async function processSamlResponse(details, { profile, role }) {
-  const samlAssertion = unescape(parse(details._postData).SAMLResponse);
+async function processSamlResponse(response, credentialsPath, profile, role) {
+  const samlAssertion = unescape(parse(response).SAMLResponse);
   const saml = new Saml(samlAssertion);
 
   logger.debug('Parsed SAML assertion %O', saml.parsedSaml);
@@ -146,20 +147,20 @@ async function processSamlResponse(details, { profile, role }) {
   logger.debug('Found Role ARN %s', roleArn);
   logger.debug('Found Principal ARN %s', principalArn);
 
-  const response = await (new AWS.STS).assumeRoleWithSAML({
+  const roleResponse = await (new AWS.STS).assumeRoleWithSAML({
     DurationSeconds: sessionDuration,
     PrincipalArn: principalArn,
     RoleArn: roleArn,
     SAMLAssertion: samlAssertion
   }).promise();
 
-  logger.debug('Role has been assumed %O', response);
+  logger.debug('Role has been assumed %O', roleResponse);
 
-  await saveCredentials(profile, {
-    accessKeyId: response.Credentials.AccessKeyId,
-    secretAccessKey: response.Credentials.SecretAccessKey,
-    expiration: response.Credentials.Expiration,
-    sessionToken: response.Credentials.SessionToken
+  await saveCredentials(credentialsPath, profile, {
+    accessKeyId: roleResponse.Credentials.AccessKeyId,
+    secretAccessKey: roleResponse.Credentials.SecretAccessKey,
+    expiration: roleResponse.Credentials.Expiration,
+    sessionToken: roleResponse.Credentials.SessionToken
   });
 }
 
@@ -196,9 +197,9 @@ async function loadCredentials(path, profile) {
  * Save AWS credentials to a profile section.
  */
 
-async function saveCredentials(profile, { accessKeyId, secretAccessKey, expiration, sessionToken }) {
+async function saveCredentials(path, profile, { accessKeyId, secretAccessKey, expiration, sessionToken }) {
   // The config file may have other profiles configured, so parse existing data instead of writing a new file instead.
-  let credentials = await loadCredentials(AWS_CREDENTIALS_FILE);
+  let credentials = await loadCredentials(path);
 
   if (!credentials) {
     credentials = {};
@@ -210,7 +211,7 @@ async function saveCredentials(profile, { accessKeyId, secretAccessKey, expirati
   credentials[profile].aws_session_expiration = expiration.toISOString();
   credentials[profile].aws_session_token = sessionToken;
 
-  await fs.writeFile(AWS_CREDENTIALS_FILE, ini.encode(credentials))
+  await fs.writeFile(path, ini.encode(credentials))
 
   logger.debug('Config file %O', credentials);
 }
@@ -221,8 +222,8 @@ async function saveCredentials(profile, { accessKeyId, secretAccessKey, expirati
  * failing at the exact time of expiration.
  */
 
-async function getSessionExpirationForProfileCredentials(path, profile) {
-  const credentials = await loadCredentials(path, profile);
+async function getSessionExpirationForProfileCredentials(credentialsPath, profile) {
+  const credentials = await loadCredentials(credentialsPath, profile);
 
   if (!credentials) {
     return { isValid: false, expiresAt: null };
@@ -365,7 +366,7 @@ async function openConsole(url) {
   }
 
   let isAuthenticated = false;
-  let { isValid: isSessionValid, expiresAt: sessionExpiresAt } = await getSessionExpirationForProfileCredentials(AWS_CREDENTIALS_FILE, argv.awsProfile);
+  let { isValid: isSessionValid, expiresAt: sessionExpiresAt } = await getSessionExpirationForProfileCredentials(argv.awsSharedCredentialsFile, argv.awsProfile);
 
   if (!argv.clean && !argv.force && isSessionValid) {
     logger.info('Skipping re-authorization as session is valid until %s. Use --force to ignore.', new Date(sessionExpiresAt));
@@ -389,7 +390,7 @@ async function openConsole(url) {
     if (request.url() === 'https://signin.aws.amazon.com/saml') {
       isAuthenticated = true;
 
-      await processSamlResponse(request, { profile: argv.awsProfile, role: argv.awsRoleArn,  });
+      await processSamlResponse(request._postData, argv.awsSharedCredentialsFile, argv.awsProfile, argv.awsRoleArn);
 
       logger.info('Login successful!');
 

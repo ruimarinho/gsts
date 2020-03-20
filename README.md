@@ -114,6 +114,8 @@ Options:
   --aws-profile                  AWS profile name for storing credentials
                                                                 [default: "sts"]
   --aws-role-arn                 AWS role ARN to authenticate with
+  --aws-shared-credentials-file  AWS shared credentials file
+                                 [default: "~/.aws/credentials"]
   --clean                        Start authorization from a clean session state
   --daemon                       Install daemon service (only on macOS for now)
   --daemon-out-log-path          Path for storing the daemon's output log
@@ -129,12 +131,13 @@ Options:
 
 For compatibility reasons, most environment variables supported [aws-google-auth](https://github.com/cevoaustralia/aws-google-auth) are also supported by `gsts`:
 
-| Description | Env Variable | Required |
-|-------------|-----------|------------|
-| AWS Profile | `$AWS_PROFILE` | No (_default: sts_)
-| Google IDP ID | `$GOOGLE_IDP_ID` | Yes |
-| Google SP ID | `$GOOGLE_SP_ID` | Yes |
-| Google Username | `$GOOGLE_USERNAME` | No |
+| Description | Command-Line Option | Env Variable | Required |
+|-------------|---------------------|--------------|----------|
+| Google IDP ID | `--idp-id` | `$GOOGLE_IDP_ID` | Yes |
+| Google SP ID | `--sp-id` | `$GOOGLE_SP_ID` | Yes |
+| Google Username | `--username` | `$GOOGLE_USERNAME` | No |
+| AWS Shared Credentials File | `--aws-shared-credentials-file` | `$AWS_SHARED_CREDENTIALS_FILE` | No (_default: ~/.aws/credentials_) |
+| AWS Profile | `--aws-profile` | `$AWS_PROFILE` | No (_default: default_)
 
 ## Discovery of IDP and SP IDs
 
