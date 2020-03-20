@@ -170,7 +170,20 @@ async function processSamlResponse(details, { profile, role }) {
  */
 
 async function loadCredentials(path, profile) {
-  const config = ini.parse(await fs.readFile(path, 'utf-8'));
+  let credentials;
+
+  try {
+    credentials = await fs.readFile('foobar', 'utf-8')
+  } catch (e) {
+    if (e.code === 'ENOENT') {
+      logger.debug('Credentials file does not exist at %s', path)
+      return;
+    }
+
+    throw e;
+  }
+
+  const config = ini.parse(credentials);
 
   if (profile) {
     return config[profile];
@@ -185,7 +198,11 @@ async function loadCredentials(path, profile) {
 
 async function saveCredentials(profile, { accessKeyId, secretAccessKey, expiration, sessionToken }) {
   // The config file may have other profiles configured, so parse existing data instead of writing a new file instead.
-  const credentials = await loadCredentials(AWS_CREDENTIALS_FILE);
+  let credentials = await loadCredentials(AWS_CREDENTIALS_FILE);
+
+  if (!credentials) {
+    credentials = {};
+  }
 
   credentials[profile] = {};
   credentials[profile].aws_access_key_id = accessKeyId;
@@ -208,8 +225,6 @@ async function getSessionExpirationForProfileCredentials(path, profile) {
   const credentials = await loadCredentials(path, profile);
 
   if (!credentials) {
-    logger.debug('Credentials not found');
-
     return { isValid: false, expiresAt: null };
   }
 
