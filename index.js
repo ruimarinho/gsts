@@ -68,11 +68,11 @@ const argv = require('yargs')
       description: 'Install daemon service (only on macOS for now)'
     },
     'daemon-out-log-path': {
-      description: `Path for storing the daemon's output log`,
+      description: `Path for storing the output log of the daemon`,
       default: '/usr/local/var/log/gsts.stdout.log'
     },
     'daemon-error-log-path': {
-      description: `Path for storing the daemon's error log`,
+      description: `Path for storing the error log of the daemon`,
       default: '/usr/local/var/log/gsts.stderr.log'
     },
     'force': {

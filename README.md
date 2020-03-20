@@ -135,9 +135,9 @@ Options:
                                  [default: "~/.aws/credentials"]
   --clean                        Start authorization from a clean session state
   --daemon                       Install daemon service (only on macOS for now)
-  --daemon-out-log-path          Path for storing the daemon's output log
+  --daemon-out-log-path          Path for storing the output log of the daemon
                                  [default: "/usr/local/var/log/gsts.stdout.log"]
-  --daemon-error-log-path        Path for storing the daemon's error log
+  --daemon-error-log-path        Path for storing the error log of the daemon
                                  [default: "/usr/local/var/log/gsts.stderr.log"]
   --force                        Force re-authorization even with valid session
   --idp-id, --google-idp-id      Google Identity Provider ID (IDP IP) [required]
