@@ -21,18 +21,18 @@
     "auth"
   ],
   "dependencies": {
-    "aws-sdk": "^2.595.0",
+    "aws-sdk": "^2.643.0",
     "debug": "^4.1.1",
     "env-paths": "^2.2.0",
     "ini": "^1.3.5",
     "libsaml": "^1.0.0",
     "open": "^7.0.3",
     "plist": "^3.0.1",
-    "puppeteer": "^2.0.0",
+    "puppeteer": "^2.1.1",
     "puppeteer-extra": "^3.1.9",
     "puppeteer-extra-plugin-stealth": "^2.4.9",
     "trash": "^6.1.1",
-    "yargs": "^15.3.0"
+    "yargs": "^15.3.1"
   },
   "devDependencies": {}
 }
