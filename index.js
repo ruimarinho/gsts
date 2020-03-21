@@ -223,6 +223,8 @@ async function saveCredentials(path, profile, { accessKeyId, secretAccessKey, ex
  */
 
 async function getSessionExpirationForProfileCredentials(credentialsPath, profile) {
+  logger.debug('Attempting to retrieve session expiration credentials');
+
   const credentials = await loadCredentials(credentialsPath, profile);
 
   if (!credentials) {
@@ -392,7 +394,7 @@ async function openConsole(url) {
 
       await processSamlResponse(request._postData, argv.awsSharedCredentialsFile, argv.awsProfile, argv.awsRoleArn);
 
-      logger.info('Login successful!');
+      logger.info(`Login successful${ argv.verbose ? ` stored in ${argv.awsSharedCredentialsFile} with AWS profile "${argv.awsProfile}" and ARN role ${argv.awsRoleArn}` : '!' }`);
 
       request.continue();
       return;
