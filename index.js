@@ -174,7 +174,7 @@ async function loadCredentials(path, profile) {
   let credentials;
 
   try {
-    credentials = await fs.readFile('foobar', 'utf-8')
+    credentials = await fs.readFile(path, 'utf-8')
   } catch (e) {
     if (e.code === 'ENOENT') {
       logger.debug('Credentials file does not exist at %s', path)
