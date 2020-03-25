@@ -129,8 +129,9 @@ async function processSamlResponse(response, credentialsPath, profile, role) {
 
   logger.debug('Parsed SAML assertion %O', saml.parsedSaml);
 
-  const attribute = saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role')[0];
-  const roleArn = role || attribute.match(REGEX_PATTERN_ROLE)[0];
+  const isTargetRole = (element) => element.match(role || REGEX_PATTERN_ROLE)
+  const attribute = saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role').find(isTargetRole);
+  const roleArn = attribute.match(REGEX_PATTERN_ROLE)[0];
   const principalArn = attribute.match(REGEX_PATTERN_PRINCIPAL)[0];
 
   let sessionDuration = DEFAULT_SESSION_DURATION;
