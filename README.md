@@ -43,7 +43,7 @@ There are three key options or variables you need know about (you can read more 
 You can then launch `gsts` using command-line options:
 
 ```sh
-gsts --aws-role-arn arn:aws:iam::123456789:role/foobar --sp-id 12345 --idp-ip A12bc34d5 --username foo@bar.com
+gsts --aws-role-arn arn:aws:iam::123456789:role/foobar --sp-id 12345 --idp-id A12bc34d5 --username foo@bar.com
 ```
 
 Alternatively, you can use environment variables instead:
