@@ -4,10 +4,9 @@
  * Module dependencies.
  */
 
-const { parse } = require('querystring');
 const AWS = require('aws-sdk');
 const Logger = require('./logger')
-const Saml = require('libsaml');
+const Parser = require('./parser');
 const childProcess = require('child_process');
 const fs = require('fs').promises;
 const homedir = require('os').homedir();
@@ -20,30 +19,15 @@ const puppeteer = require('puppeteer-extra');
 const stealth = require('puppeteer-extra-plugin-stealth');
 const trash = require('trash');
 
-// Default session duration, as states on AWS documentation.
-// See https://aws.amazon.com/blogs/security/enable-federated-api-access-to-your-aws-resources-for-up-to-12-hours-using-iam-roles/.
-const DEFAULT_SESSION_DURATION = 3600 // 1 hour
-
 // Delta (in ms) between exact expiration date and current date to avoid requests
 // on the same second to fail.
 const EXPIRATION_DELTA = 30e3; // 30 seconds
-
-// Regex pattern for Role.
-const REGEX_PATTERN_ROLE = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
-
-// Regex pattern for Principal (SAML Provider).
-const REGEX_PATTERN_PRINCIPAL = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
 
 // Project namespace to be used for plist generation.
 const PROJECT_NAMESPACE = 'io.github.ruimarinho.gsts';
 
 // LaunchAgents plist path.
 const MACOS_LAUNCH_AGENT_HELPER_PATH = path.join(process.env.HOME, 'Library', 'LaunchAgents', `${PROJECT_NAMESPACE}.plist`)
-
-// Errors.
-const errors = {
-  ROLE_NOT_FOUND_ERROR: 'ROLE_NOT_FOUND_ERROR'
-};
 
 // Parse command line arguments.
 const argv = require('yargs')
@@ -124,47 +108,10 @@ const SAML_URL = `https://accounts.google.com/o/saml2/initsso?idpid=${argv.googl
 const logger = new Logger(process.stdout, process.stderr, argv.verbose);
 
 /**
- * Process a SAML response and extract all relevant data to be exchanged for an
- * STS token.
+ * Create instance of Parser with logger.
  */
 
-async function parseSamlResponse(response, role) {
-  const samlAssertion = unescape(parse(response).SAMLResponse);
-  const saml = new Saml(samlAssertion);
-
-  logger.debug('Parsed SAML assertion %O', saml.parsedSaml);
-
-  const isTargetRole = (element) => element.match(role || REGEX_PATTERN_ROLE)
-  const attribute = saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role').find(isTargetRole);
-
-  if (!attribute) {
-    throw new Error(errors.ROLE_NOT_FOUND_ERROR);
-  }
-
-  const roleArn = attribute.match(REGEX_PATTERN_ROLE)[0];
-  const principalArn = attribute.match(REGEX_PATTERN_PRINCIPAL)[0];
-
-  let sessionDuration = DEFAULT_SESSION_DURATION;
-
-  if (saml.parsedSaml.attributes) {
-    for (const attribute of saml.parsedSaml.attributes) {
-      if (attribute.name === 'https://aws.amazon.com/SAML/Attributes/SessionDuration') {
-        sessionDuration = Number(attribute.value[0]);
-        logger.debug('Found SessionDuration attribute %s', sessionDuration);
-      }
-    }
-  }
-
-  logger.debug('Found Role ARN %s', roleArn);
-  logger.debug('Found Principal ARN %s', principalArn);
-
-  return {
-    sessionDuration,
-    principalArn,
-    roleArn,
-    samlAssertion
-  };
-}
+const parser = new Parser(logger);
 
 /**
  * Load AWS credentials from the user home preferences.
@@ -395,7 +342,7 @@ async function openConsole(url) {
       isAuthenticated = true;
 
       try {
-        const { sessionDuration, principalArn, roleArn, samlAssertion } = await parseSamlResponse(request._postData, argv.awsRoleArn);
+        const { sessionDuration, principalArn, roleArn, samlAssertion } = await parser.parseSamlResponse(request._postData, argv.awsRoleArn);
         const response = await (new AWS.STS).assumeRoleWithSAML({
           DurationSeconds: sessionDuration,
           PrincipalArn: principalArn,
@@ -414,7 +361,7 @@ async function openConsole(url) {
 
         logger.info(`Login successful${ argv.verbose ? ` stored in ${argv.awsSharedCredentialsFile} with AWS profile "${argv.awsProfile}" and ARN role ${argv.awsRoleArn}` : '!' }`);
       } catch (e) {
-        if (e.message === ROLE_NOT_FOUND_ERROR) {
+        if (e.message === Parser.errors.ROLE_NOT_FOUND_ERROR) {
           log.error('Custom role ARN %s not found', argv.awsRoleArn);
           return;
         }
@@ -479,12 +426,10 @@ async function openConsole(url) {
 })();
 
 module.exports = {
-  parseSamlResponse,
   loadCredentials,
   saveCredentials,
   getSessionExpirationForProfileCredentials,
   cleanDirectory,
   installDaemon,
-  openConsole,
-  errors
+  openConsole
 }
