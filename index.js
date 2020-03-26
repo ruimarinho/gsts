@@ -40,6 +40,11 @@ const PROJECT_NAMESPACE = 'io.github.ruimarinho.gsts';
 // LaunchAgents plist path.
 const MACOS_LAUNCH_AGENT_HELPER_PATH = path.join(process.env.HOME, 'Library', 'LaunchAgents', `${PROJECT_NAMESPACE}.plist`)
 
+// Errors.
+const errors = {
+  ROLE_NOT_FOUND_ERROR: 'ROLE_NOT_FOUND_ERROR'
+};
+
 // Parse command line arguments.
 const argv = require('yargs')
   .usage('gsts')
@@ -123,14 +128,20 @@ const logger = new Logger(process.stdout, process.stderr, argv.verbose);
  * STS token.
  */
 
-async function processSamlResponse(response, credentialsPath, profile, role) {
+async function parseSamlResponse(response, role) {
   const samlAssertion = unescape(parse(response).SAMLResponse);
   const saml = new Saml(samlAssertion);
 
   logger.debug('Parsed SAML assertion %O', saml.parsedSaml);
 
-  const attribute = saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role')[0];
-  const roleArn = role || attribute.match(REGEX_PATTERN_ROLE)[0];
+  const isTargetRole = (element) => element.match(role || REGEX_PATTERN_ROLE)
+  const attribute = saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role').find(isTargetRole);
+
+  if (!attribute) {
+    throw new Error(errors.ROLE_NOT_FOUND_ERROR);
+  }
+
+  const roleArn = attribute.match(REGEX_PATTERN_ROLE)[0];
   const principalArn = attribute.match(REGEX_PATTERN_PRINCIPAL)[0];
 
   let sessionDuration = DEFAULT_SESSION_DURATION;
@@ -138,7 +149,7 @@ async function processSamlResponse(response, credentialsPath, profile, role) {
   if (saml.parsedSaml.attributes) {
     for (const attribute of saml.parsedSaml.attributes) {
       if (attribute.name === 'https://aws.amazon.com/SAML/Attributes/SessionDuration') {
-        sessionDuration = attribute.value[0];
+        sessionDuration = Number(attribute.value[0]);
         logger.debug('Found SessionDuration attribute %s', sessionDuration);
       }
     }
@@ -147,21 +158,12 @@ async function processSamlResponse(response, credentialsPath, profile, role) {
   logger.debug('Found Role ARN %s', roleArn);
   logger.debug('Found Principal ARN %s', principalArn);
 
-  const roleResponse = await (new AWS.STS).assumeRoleWithSAML({
-    DurationSeconds: sessionDuration,
-    PrincipalArn: principalArn,
-    RoleArn: roleArn,
-    SAMLAssertion: samlAssertion
-  }).promise();
-
-  logger.debug('Role has been assumed %O', roleResponse);
-
-  await saveCredentials(credentialsPath, profile, {
-    accessKeyId: roleResponse.Credentials.AccessKeyId,
-    secretAccessKey: roleResponse.Credentials.SecretAccessKey,
-    expiration: roleResponse.Credentials.Expiration,
-    sessionToken: roleResponse.Credentials.SessionToken
-  });
+  return {
+    sessionDuration,
+    principalArn,
+    roleArn,
+    samlAssertion
+  };
 }
 
 /**
@@ -392,9 +394,31 @@ async function openConsole(url) {
     if (request.url() === 'https://signin.aws.amazon.com/saml') {
       isAuthenticated = true;
 
-      await processSamlResponse(request._postData, argv.awsSharedCredentialsFile, argv.awsProfile, argv.awsRoleArn);
+      try {
+        const { sessionDuration, principalArn, roleArn, samlAssertion } = await parseSamlResponse(request._postData, argv.awsRoleArn);
+        const response = await (new AWS.STS).assumeRoleWithSAML({
+          DurationSeconds: sessionDuration,
+          PrincipalArn: principalArn,
+          RoleArn: roleArn,
+          SAMLAssertion: samlAssertion
+        }).promise();
 
-      logger.info(`Login successful${ argv.verbose ? ` stored in ${argv.awsSharedCredentialsFile} with AWS profile "${argv.awsProfile}" and ARN role ${argv.awsRoleArn}` : '!' }`);
+        logger.debug('Role has been assumed %O', response);
+
+        await saveCredentials(argv.awsSharedCredentialsFile, argv.awsProfile, {
+          accessKeyId: response.Credentials.AccessKeyId,
+          secretAccessKey: response.Credentials.SecretAccessKey,
+          expiration: response.Credentials.Expiration,
+          sessionToken: response.Credentials.SessionToken
+        });
+
+        logger.info(`Login successful${ argv.verbose ? ` stored in ${argv.awsSharedCredentialsFile} with AWS profile "${argv.awsProfile}" and ARN role ${argv.awsRoleArn}` : '!' }`);
+      } catch (e) {
+        if (e.message === ROLE_NOT_FOUND_ERROR) {
+          log.error('Custom role ARN %s not found', argv.awsRoleArn);
+          return;
+        }
+      }
 
       request.continue();
       return;
@@ -453,3 +477,14 @@ async function openConsole(url) {
 
   await browser.close();
 })();
+
+module.exports = {
+  parseSamlResponse,
+  loadCredentials,
+  saveCredentials,
+  getSessionExpirationForProfileCredentials,
+  cleanDirectory,
+  installDaemon,
+  openConsole,
+  errors
+}
