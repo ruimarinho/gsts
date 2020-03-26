@@ -5,7 +5,9 @@
 
 const { escape } = require('querystring');
 const fs = require('fs').promises;
-const gsts = require('.');
+const Logger = require('./logger')
+const Parser = require('./parser');
+const parser = new Parser(new Logger(process.stdout, process.stderr, 0));
 
 /**
  * Samples
@@ -41,7 +43,7 @@ test('parses principal and role arns from saml response', async () => {
     roleArn,
     samlAssertion,
     sessionDuration
-  } = await gsts.parseSamlResponse(response)
+  } = await parser.parseSamlResponse(response)
 
   expect(principalArn).toBe('arn:aws:iam::123456789:saml-provider/GSuite');
   expect(roleArn).toBe('arn:aws:iam::123456789:role/foobar');
@@ -52,7 +54,7 @@ test('parses principal and role arns from saml response', async () => {
 test('parses custom session duration from saml response', async () => {
   const assertion = await getSampleAssertion(SAML_SESSION_BASIC_WITH_SESSION_DURATION);
   const response = await getResponseFromAssertion(assertion);
-  const { sessionDuration } = await gsts.parseSamlResponse(response)
+  const { sessionDuration } = await parser.parseSamlResponse(response)
 
   expect(sessionDuration).toBe(43200);
 });
@@ -60,7 +62,7 @@ test('parses custom session duration from saml response', async () => {
 test('accepts custom role if multiple roles are available', async () => {
   const assertion = await getSampleAssertion(SAML_SESSION_BASIC_WITH_MULTIPLE_ROLES);
   const response = await getResponseFromAssertion(assertion);
-  const { principalArn, roleArn } = await gsts.parseSamlResponse(response, 'arn:aws:iam::987654321:role/Foobiz');
+  const { principalArn, roleArn } = await parser.parseSamlResponse(response, 'arn:aws:iam::987654321:role/Foobiz');
 
   expect(principalArn).toBe('arn:aws:iam::987654321:saml-provider/GSuite');
   expect(roleArn).toBe('arn:aws:iam::987654321:role/Foobiz');
@@ -70,7 +72,7 @@ test('throws if custom role is not found', async () => {
   const assertion = await getSampleAssertion(SAML_SESSION_BASIC_WITH_MULTIPLE_ROLES);
   const response = await getResponseFromAssertion(assertion);
 
-  await expect(gsts.parseSamlResponse(response, 'arn:aws:iam::987654321:role/Foobar')).rejects.toThrow(gsts.errors.ROLE_NOT_FOUND_ERROR);
+  await expect(parser.parseSamlResponse(response, 'arn:aws:iam::987654321:role/Foobar')).rejects.toThrow(Parser.errors.ROLE_NOT_FOUND_ERROR);
 });
 
 /**
