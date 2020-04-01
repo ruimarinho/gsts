@@ -26,9 +26,6 @@ const EXPIRATION_DELTA = 30e3; // 30 seconds
 // Project namespace to be used for plist generation.
 const PROJECT_NAMESPACE = 'io.github.ruimarinho.gsts';
 
-// LaunchAgents plist path.
-const MACOS_LAUNCH_AGENT_HELPER_PATH = path.join(process.env.HOME, 'Library', 'LaunchAgents', `${PROJECT_NAMESPACE}.plist`)
-
 // Parse command line arguments.
 const argv = require('yargs')
   .usage('gsts')
@@ -243,9 +240,12 @@ async function installDaemon(platform, googleIdpId, googleSpId, username, daemon
     return logger.error('Sorry, this feature is only available on macOS at this time');
   }
 
-  logger.debug('Unloading potentially existing launch agent at %s', MACOS_LAUNCH_AGENT_HELPER_PATH);
+  // LaunchAgents plist path.
+  const plistPath = path.join(homedir, 'Library', 'LaunchAgents', `${PROJECT_NAMESPACE}.plist`);
 
-  await childProcess.execFile('launchctl', ['unload', MACOS_LAUNCH_AGENT_HELPER_PATH], (error, stdout, stderr) => {
+  logger.debug('Unloading potentially existing launch agent at %s', plistPath);
+
+  await childProcess.execFile('launchctl', ['unload', plistPath], (error, stdout, stderr) => {
     if (!error) {
       return;
     }
@@ -265,11 +265,11 @@ async function installDaemon(platform, googleIdpId, googleSpId, username, daemon
 
   logger.debug('Generated launch agent plist file %s', plist);
 
-  await fs.writeFile(MACOS_LAUNCH_AGENT_HELPER_PATH, plist);
+  await fs.writeFile(plistPath, plist);
 
-  logger.debug('Successfully wrote the launch agent plist to %s', MACOS_LAUNCH_AGENT_HELPER_PATH);
+  logger.debug('Successfully wrote the launch agent plist to %s', plistPath);
 
-  await childProcess.execFile('launchctl', ['load', MACOS_LAUNCH_AGENT_HELPER_PATH], (error, stdout, stderr) => {
+  await childProcess.execFile('launchctl', ['load', plistPath], (error, stdout, stderr) => {
     if (error) {
       logger.error(error);
       return;
@@ -282,7 +282,7 @@ async function installDaemon(platform, googleIdpId, googleSpId, username, daemon
     if (stdout) {
       logger.info('Result from stdout while attempting to load agent was "%s"', stdout);
     } else {
-      logger.info('Daemon installed successfully at %s', MACOS_LAUNCH_AGENT_HELPER_PATH)
+      logger.info('Daemon installed successfully at %s', plistPath)
     }
   });
 }
