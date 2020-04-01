@@ -409,8 +409,6 @@ async function openConsole(url) {
 
     const args = ['--headful'];
 
-    const args = ['--headful'];
-
     for (const arg of ['awsProfile', 'awsRoleArn', 'awsSharedCredentialsFile', 'clean', 'force', 'idpId', 'spId', 'username', 'verbose']) {
       if (!argv[arg]) {
         continue;
