@@ -27,7 +27,7 @@ const EXPIRATION_DELTA = 30e3; // 30 seconds
 const PROJECT_NAMESPACE = 'io.github.ruimarinho.gsts';
 
 // LaunchAgents plist path.
-const MACOS_LAUNCH_AGENT_HELPER_PATH = path.join(process.env.HOME, 'Library', 'LaunchAgents', `${PROJECT_NAMESPACE}.plist`)
+const MACOS_LAUNCH_AGENT_HELPER_PATH = path.join(process.env.HOME || '', 'Library', 'LaunchAgents', `${PROJECT_NAMESPACE}.plist`)
 
 // Parse command line arguments.
 const argv = require('yargs')
