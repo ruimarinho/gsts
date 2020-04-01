@@ -11,7 +11,8 @@
   "bin": "./index.js",
   "files": [
     "index.js",
-    "logger.js"
+    "logger.js",
+    "parser.js"
   ],
   "keywords": [
     "google",
