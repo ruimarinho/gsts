@@ -409,12 +409,14 @@ async function openConsole(url) {
 
     const args = ['--headful'];
 
-    if (argv.force) {
-      args.push('--force');
-    }
+    const args = ['--headful'];
 
-    if (argv.clean) {
-      args.push('--clean');
+    for (const arg of ['awsProfile', 'awsRoleArn', 'awsSharedCredentialsFile', 'clean', 'force', 'idpId', 'spId', 'username', 'verbose']) {
+      if (!argv[arg]) {
+        continue;
+      }
+
+      args.push(`--${arg}=${argv[arg]}`)
     }
 
     const ui = childProcess.spawn('gsts', args, { stdio: 'inherit' });
