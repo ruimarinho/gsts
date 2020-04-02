@@ -407,7 +407,7 @@ async function openConsole(url) {
   if (!isAuthenticated && !argv.headful) {
     logger.info('User is not authenticated, spawning headful instance');
 
-    const args = ['--headful'];
+    const args = [__filename, '--headful'];
 
     for (const arg of ['awsProfile', 'awsRoleArn', 'awsSharedCredentialsFile', 'clean', 'force', 'idpId', 'spId', 'username', 'verbose']) {
       if (!argv[arg]) {
@@ -417,7 +417,7 @@ async function openConsole(url) {
       args.push(`--${arg}=${argv[arg]}`)
     }
 
-    const ui = childProcess.spawn('gsts', args, { stdio: 'inherit' });
+    const ui = childProcess.spawn(process.execPath, args, { stdio: 'inherit' });
 
     ui.on('close', code => logger.debug(`Headful instance has exited with code ${code}`))
   }
