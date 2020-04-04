@@ -178,6 +178,10 @@ The copied URL will be in the format of `https://accounts.google.com/o/saml2/ini
 
 Sometimes puppeteer can get confused with the session state Chromium's data directory. If you can't get out of this loop, you should try starting from a clean session directory instead using `gsts --clean`.
 
+**gsts conflicts with an alias from oh-my-zsh's git plugin**
+
+[ohmyzsh's git plugin](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/git) includes an alias named `gsts` as a shorthand for `git stash show --text`. You can either disable the `git` plugin entirely or, alternatively, add `unalias gsts` at the end of your dotfiles if you don't use this git command often.
+
 ## License
 
 MIT
