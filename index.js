@@ -362,9 +362,19 @@ async function openConsole(url) {
         logger.info(`Login successful${ argv.verbose ? ` stored in ${argv.awsSharedCredentialsFile} with AWS profile "${argv.awsProfile}" and ARN role ${argv.awsRoleArn}` : '!' }`);
       } catch (e) {
         if (e.message === Parser.errors.ROLE_NOT_FOUND_ERROR) {
-          log.error('Custom role ARN %s not found', argv.awsRoleArn);
+          logger.error('Custom role ARN %s not found', argv.awsRoleArn);
+          request.abort();
           return;
         }
+
+        if (e.code === 'ValidationError') {
+          logger.error(e.message);
+          request.abort();
+          return;
+        }
+
+        request.abort();
+        throw e;
       }
 
       request.continue();
