@@ -4,7 +4,7 @@
  * Module dependencies.
  */
 
-const AWS = require('aws-sdk');
+const STS = require('aws-sdk/clients/sts');
 const Logger = require('./logger')
 const Parser = require('./parser');
 const childProcess = require('child_process');
@@ -343,7 +343,7 @@ async function openConsole(url) {
 
       try {
         const { sessionDuration, principalArn, roleArn, samlAssertion } = await parser.parseSamlResponse(request._postData, argv.awsRoleArn);
-        const response = await (new AWS.STS).assumeRoleWithSAML({
+        const response = await (new STS()).assumeRoleWithSAML({
           DurationSeconds: sessionDuration,
           PrincipalArn: principalArn,
           RoleArn: roleArn,
