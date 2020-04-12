@@ -5,10 +5,7 @@
 
 const { parse } = require('querystring');
 const Saml = require('libsaml');
-
-// Default session duration, as states on AWS documentation.
-// See https://aws.amazon.com/blogs/security/enable-federated-api-access-to-your-aws-resources-for-up-to-12-hours-using-iam-roles/.
-const DEFAULT_SESSION_DURATION = 3600 // 1 hour
+const errors = require('./errors');
 
 // Regex pattern for Role.
 const REGEX_PATTERN_ROLE = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
@@ -36,13 +33,13 @@ class Parser {
     const attribute = saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role').find(isTargetRole);
 
     if (!attribute) {
-      throw new Error(Parser.errors.ROLE_NOT_FOUND_ERROR);
+      throw new Error(errors.ROLE_NOT_FOUND_ERROR);
     }
 
     const roleArn = attribute.match(REGEX_PATTERN_ROLE)[0];
     const principalArn = attribute.match(REGEX_PATTERN_PRINCIPAL)[0];
 
-    let sessionDuration = DEFAULT_SESSION_DURATION;
+    let sessionDuration;
 
     if (saml.parsedSaml.attributes) {
       for (const attribute of saml.parsedSaml.attributes) {
@@ -66,11 +63,7 @@ class Parser {
 }
 
 /**
- * Errors
+ * Exports
  */
-
-Parser.errors = {
-  ROLE_NOT_FOUND_ERROR: 'ROLE_NOT_FOUND_ERROR'
-}
 
 module.exports = Parser;

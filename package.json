@@ -10,6 +10,9 @@
   },
   "bin": "./index.js",
   "files": [
+    "credentials-manager.js",
+    "daemonizer.js",
+    "errors.js",
     "index.js",
     "logger.js",
     "parser.js"

@@ -7,6 +7,7 @@ const { escape } = require('querystring');
 const fs = require('fs').promises;
 const Logger = require('./logger')
 const Parser = require('./parser');
+const errors = require('./errors');
 const parser = new Parser(new Logger(process.stdout, process.stderr, 0));
 
 /**
@@ -48,7 +49,7 @@ test('parses principal and role arns from saml response', async () => {
   expect(principalArn).toBe('arn:aws:iam::123456789:saml-provider/GSuite');
   expect(roleArn).toBe('arn:aws:iam::123456789:role/foobar');
   expect(samlAssertion).toBe(assertion);
-  expect(sessionDuration).toBe(3600);
+  expect(sessionDuration).toBe(undefined);
 });
 
 test('parses custom session duration from saml response', async () => {
@@ -72,7 +73,7 @@ test('throws if custom role is not found', async () => {
   const assertion = await getSampleAssertion(SAML_SESSION_BASIC_WITH_MULTIPLE_ROLES);
   const response = await getResponseFromAssertion(assertion);
 
-  await expect(parser.parseSamlResponse(response, 'arn:aws:iam::987654321:role/Foobar')).rejects.toThrow(Parser.errors.ROLE_NOT_FOUND_ERROR);
+  await expect(parser.parseSamlResponse(response, 'arn:aws:iam::987654321:role/Foobar')).rejects.toThrow(errors.ROLE_NOT_FOUND_ERROR);
 });
 
 /**
