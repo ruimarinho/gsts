@@ -3,6 +3,7 @@
  * Module dependencies.
  */
 
+const { dirname } = require('path');
 const Parser = require('./parser');
 const STS = require('aws-sdk/clients/sts');
 const fs = require('fs').promises;
@@ -91,6 +92,7 @@ class CredentialsManager {
     credentials[profile].aws_session_expiration = expiration.toISOString();
     credentials[profile].aws_session_token = sessionToken;
 
+    await fs.mkdir(dirname(path), { recursive: true });
     await fs.writeFile(path, ini.encode(credentials))
 
     this.logger.debug('Config file %O', credentials);
@@ -102,10 +104,10 @@ class CredentialsManager {
    * failing at the exact time of expiration.
    */
 
-  async getSessionExpirationFromCredentials(credentialsPath, profile) {
+  async getSessionExpirationFromCredentials(path, profile) {
     this.logger.debug('Attempting to retrieve session expiration credentials');
 
-    const credentials = await this.loadCredentials(credentialsPath, profile);
+    const credentials = await this.loadCredentials(path, profile);
 
     if (!credentials) {
       return { isValid: false, expiresAt: null };
