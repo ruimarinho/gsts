@@ -228,16 +228,7 @@ const credentialsManager = new CredentialsManager(logger, {
   if (!isAuthenticated && !argv.headful) {
     logger.info('User is not authenticated, spawning headful instance');
 
-    const args = [__filename, '--headful'];
-
-    for (const arg of ['awsProfile', 'awsRoleArn', 'awsSharedCredentialsFile', 'force', 'idpId', 'spId', 'username', 'verbose']) {
-      if (!argv[arg]) {
-        continue;
-      }
-
-      args.push(`--${arg}=${argv[arg]}`)
-    }
-
+    const args = [__filename, '--headful', ...process.argv.slice(2)];
     const ui = childProcess.spawn(process.execPath, args, { stdio: 'inherit' });
 
     ui.on('close', code => logger.debug(`Headful instance has exited with code ${code}`))
