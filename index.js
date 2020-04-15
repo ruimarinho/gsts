@@ -7,6 +7,7 @@
 const CredentialsManager = require('./credentials-manager');
 const Daemonizer = require('./daemonizer');
 const Logger = require('./logger')
+const Stealth = require('puppeteer-extra-plugin-stealth');
 const childProcess = require('child_process');
 const errors = require('./errors');
 const homedir = require('os').homedir();
@@ -14,7 +15,6 @@ const open = require('open');
 const path = require('path');
 const paths = require('env-paths')('gsts', { suffix: '' });
 const puppeteer = require('puppeteer-extra');
-const stealth = require('puppeteer-extra-plugin-stealth');
 const trash = require('trash');
 
 // Default session duration, as states on AWS documentation.
@@ -59,6 +59,10 @@ const argv = require('yargs')
     'daemon-error-log-path': {
       description: `Path for storing the error log of the daemon`,
       default: '/usr/local/var/log/gsts.stderr.log'
+    },
+    'enable-experimental-u2f-support': {
+      boolean: false,
+      description: `Enable experimental U2F support`
     },
     'force': {
       boolean: false,
@@ -152,13 +156,22 @@ const credentialsManager = new CredentialsManager(logger, {
     }
   }
 
-  puppeteer.use(stealth());
-
-  const browser = await puppeteer.launch({
+  const stealth = Stealth();
+  const options = {
     headless: !argv.headful,
-    userDataDir: paths.data
-  });
+    userDataDir: paths.data,
+  };
 
+  if (argv.headful && argv.enableExperimentalU2FSupport) {
+    stealth.enabledEvasions.delete('chrome.runtime');
+    options.ignoreDefaultArgs = ['--disable-component-extensions-with-background-pages'];
+
+    logger.debug('Enabled experimental U2F support');
+  }
+
+  puppeteer.use(stealth)
+
+  const browser = await puppeteer.launch(options);
   const page = await browser.newPage();
   await page.setRequestInterception(true);
   await page.setDefaultTimeout(0);
