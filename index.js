@@ -186,7 +186,7 @@ const credentialsManager = new CredentialsManager(logger, {
         logger.info(`Login successful${ argv.verbose ? ` stored in ${argv.awsSharedCredentialsFile} with AWS profile "${argv.awsProfile}" and ARN role ${argv.awsRoleArn}` : '!' }`);
       } catch (e) {
         if (e.message === errors.ROLE_NOT_FOUND_ERROR) {
-          logger.error('Custom role ARN %s not found', argv.awsRoleArn);
+          logger.error(`Role ARN "%s" not found in the available list of roles %s`, argv.awsRoleArn, JSON.stringify(e.roles));
           request.abort();
           return;
         }

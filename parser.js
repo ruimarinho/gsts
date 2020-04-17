@@ -23,21 +23,36 @@ class Parser {
     this.logger = logger;
   }
 
-  async parseSamlResponse(response, role) {
+  async parseSamlResponse(response, customRole) {
     const samlAssertion = unescape(parse(response).SAMLResponse);
     const saml = new Saml(samlAssertion);
 
     this.logger.debug('Parsed SAML assertion %O', saml.parsedSaml);
 
-    const isTargetRole = (element) => element.match(role || REGEX_PATTERN_ROLE)
-    const attribute = saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role').find(isTargetRole);
+    const principals = [];
+    const roles = [];
 
-    if (!attribute) {
-      throw new Error(errors.ROLE_NOT_FOUND_ERROR);
+    for (const attribute of saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role')) {
+      let matches = attribute.match(REGEX_PATTERN_PRINCIPAL);
+      if (matches) {
+        principals.push(matches[0]);
+      }
+
+      matches = attribute.match(REGEX_PATTERN_ROLE);
+      if (matches) {
+        roles.push(matches[0]);
+      }
     }
 
-    const roleArn = attribute.match(REGEX_PATTERN_ROLE)[0];
-    const principalArn = attribute.match(REGEX_PATTERN_PRINCIPAL)[0];
+    if (customRole && roles.indexOf(customRole) === -1) {
+      let error = new Error(errors.ROLE_NOT_FOUND_ERROR);
+      error.roles = roles;
+      throw error;
+    }
+
+    const roleArn = customRole || roles[0];
+    const principalIndex = customRole ? roles.indexOf(customRole) : 0;
+    const principalArn = principals[principalIndex];
 
     let sessionDuration;
 
