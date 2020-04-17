@@ -36,7 +36,7 @@ The install process will automatically trigger the download of Chromium required
 
 There are three key options or variables you need know about (you can read more about how to discover them below):
 
-1. Google's Identity Provider ID, or IDP IP.
+1. Google's Identity Provider ID, or IDP ID.
 1. Google's Service Provider ID, or SP ID.
 1. AWS role ARN to authenticate with.
 
