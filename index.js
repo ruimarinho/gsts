@@ -75,7 +75,7 @@ const argv = require('yargs')
     },
     'idp-id': {
       alias: 'google-idp-id',
-      description: 'Google Identity Provider ID (IDP IP)',
+      description: 'Google Identity Provider ID (IDP ID)',
       required: true
     },
     'sp-id': {

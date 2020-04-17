@@ -36,7 +36,7 @@ The install process will automatically trigger the download of Chromium required
 
 There are three key options or variables you need know about (you can read more about how to discover them below):
 
-1. Google's Identity Provider ID, or IDP IP.
+1. Google's Identity Provider ID, or IDP ID.
 1. Google's Service Provider ID, or SP ID.
 1. AWS role ARN to authenticate with.
 
@@ -156,7 +156,7 @@ Options:
   --enable-experimental-u2f-support  Enable experimental U2F support
   --force                            Force re-authorization even with valid
                                      session
-  --idp-id, --google-idp-id          Google Identity Provider ID (IDP IP)
+  --idp-id, --google-idp-id          Google Identity Provider ID (IDP ID)
                                                                       [required]
   --sp-id, --google-sp-id            Google Service Provider ID (SP ID)
                                                                       [required]
@@ -189,7 +189,7 @@ In case you are using a pre-configured AWS SAML application as traditionally ava
 
 <img src="images/gsuite-aws-app.png" width="300px">
 
-The copied URL will be in the format of `https://accounts.google.com/o/saml2/initsso?idpid=<IDP_IP>&spid=<SP_ID>&forceauthn=false`.
+The copied URL will be in the format of `https://accounts.google.com/o/saml2/initsso?idpid=<IDP_ID>&spid=<SP_ID>&forceauthn=false`.
 
 ## Troubleshooting
 
