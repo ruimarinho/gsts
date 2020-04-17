@@ -3,6 +3,6 @@
  * Export errors codes.
  */
 
-module.export = {
+module.exports = {
   ROLE_NOT_FOUND_ERROR: 'EROLE_NOT_FOUND_ERROR'
 }
