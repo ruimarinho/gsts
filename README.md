@@ -156,7 +156,7 @@ Options:
   --enable-experimental-u2f-support  Enable experimental U2F support
   --force                            Force re-authorization even with valid
                                      session
-  --idp-id, --google-idp-id          Google Identity Provider ID (IDP IP)
+  --idp-id, --google-idp-id          Google Identity Provider ID (IDP ID)
                                                                       [required]
   --sp-id, --google-sp-id            Google Service Provider ID (SP ID)
                                                                       [required]
@@ -189,7 +189,7 @@ In case you are using a pre-configured AWS SAML application as traditionally ava
 
 <img src="images/gsuite-aws-app.png" width="300px">
 
-The copied URL will be in the format of `https://accounts.google.com/o/saml2/initsso?idpid=<IDP_IP>&spid=<SP_ID>&forceauthn=false`.
+The copied URL will be in the format of `https://accounts.google.com/o/saml2/initsso?idpid=<IDP_ID>&spid=<SP_ID>&forceauthn=false`.
 
 ## Troubleshooting
 
