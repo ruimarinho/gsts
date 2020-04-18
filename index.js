@@ -12,6 +12,7 @@ const childProcess = require('child_process');
 const errors = require('./errors');
 const homedir = require('os').homedir();
 const open = require('open');
+const ora = require('ora');
 const path = require('path');
 const paths = require('env-paths')('gsts', { suffix: '' });
 const puppeteer = require('puppeteer-extra');
@@ -144,15 +145,23 @@ const credentialsManager = new CredentialsManager(logger, {
     await trash(paths.data);
   }
 
+  const spinner = ora({ isEnabled: !argv.verbose });
+
+  if (!argv.headful) {
+   spinner.start('Logging in');
+  }
+
   let isAuthenticated = false;
 
   if (!argv.headful) {
     let session = await credentialsManager.getSessionExpirationFromCredentials(argv.awsSharedCredentialsFile, argv.awsProfile);
 
     if (!argv.force && session.isValid) {
-      logger.info('Skipping re-authorization as session is valid until %s. Use --force to ignore.', new Date(session.expiresAt));
+      logger.debug('Skipping re-authorization as session is valid until %s. Use --force to ignore.', new Date(session.expiresAt));
 
       isAuthenticated = true;
+
+      spinner.info('Login is still valid, no need to re-authorize!');
       return;
     }
   }
@@ -186,28 +195,31 @@ const credentialsManager = new CredentialsManager(logger, {
         let role = roles[0];
 
         if (roles.length > 1) {
+          spinner.stop();
+
           if (process.stdout.isTTY) {
             const choices = roles.reduce((accumulator, role) => {
               accumulator.push({ title: role.roleArn })
               return accumulator;
             }, []);
 
-            const response = await prompts([{
+            const response = await prompts({
               type: 'select',
               name: 'arn',
               message: 'Select a role to authenticate with:',
               choices
-            }]);
+            });
 
-            if (!response.arn) {
+            if (!response.hasOwnProperty('arn')) {
               request.abort();
-              logger.error('You must choose one of the available role ARNs to authenticate or, alternatively, set one directly using the --aws-role-arn option');
+              spinner.fail('You must choose one of the available role ARNs to authenticate or, alternatively, set one directly using the --aws-role-arn option');
               return;
             }
 
+
             role = roles[response.arn];
 
-            logger.info(`You may skip this step by invoking gsts with --aws-role-arn=${role.roleArn}`);
+            spinner.info(`You may skip this step by invoking gsts with --aws-role-arn=${role.roleArn}`);
           } else {
             logger.debug(`Assuming role "${role.roleArn}" from the list of available roles %o due to non-interactive mode`, roles);
           }
@@ -215,22 +227,27 @@ const credentialsManager = new CredentialsManager(logger, {
 
         await credentialsManager.assumeRoleWithSAML(samlAssertion, argv.awsSharedCredentialsFile, argv.awsProfile, role, sessionDuration);
 
-        logger.info(`Login successful${ argv.verbose ? ` and credentials stored in "${argv.awsSharedCredentialsFile}" under AWS profile "${argv.awsProfile}" with role ARN "${role.roleArn}"` : '!' }`);
+        logger.debug(`Login successful${ argv.verbose ? ` and credentials stored in "${argv.awsSharedCredentialsFile}" under AWS profile "${argv.awsProfile}" with role ARN "${role.roleArn}"` : '!' }`);
+
+        spinner.succeed('Login successful!');
       } catch (e) {
+        logger.debug('An error has ocurred while authenticating', e);
+
         if (e.message === errors.ROLE_NOT_FOUND_ERROR) {
-          logger.error(`Role ARN "%s" not found in the available list of roles %s`, argv.awsRoleArn, JSON.stringify(e.roles));
           request.abort();
+          spinner.fail(`Role ARN "${argv.awsRoleArn}" not found in the list of available roles ${JSON.stringify(e.roles)}`);
           return;
         }
 
         if (['ValidationError', 'InvalidIdentityToken'].includes(e.code)) {
-          logger.error(`A remote error ocurred while assuming role: ${e.message}`);
           request.abort();
+          spinner.fail(`A remote error ocurred while assuming role: ${e.message}`);
           return;
         }
 
         request.abort();
-        throw e;
+        spinner.fail(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
+        return;
       }
 
       request.continue();
@@ -245,7 +262,17 @@ const credentialsManager = new CredentialsManager(logger, {
     request.abort();
   });
 
-  await page.goto(`https://accounts.google.com/o/saml2/initsso?idpid=${argv.googleIdpId}&spid=${argv.googleSpId}&forceauthn=false`);
+  page.on('requestfailed', async request => {
+    logger.debug(`Request to "${request.url()}" has been aborted`);
+    await browser.close();
+  });
+
+  try {
+    await page.goto(`https://accounts.google.com/o/saml2/initsso?idpid=${argv.googleIdpId}&spid=${argv.googleSpId}&forceauthn=false`)
+  } catch (e) {
+    logger.debug('An error ocurred while browsing to initsso page', e);
+    return;
+  }
 
   if (argv.headful) {
     try {
@@ -254,7 +281,7 @@ const credentialsManager = new CredentialsManager(logger, {
       const selector = await page.$('input[type=email]');
 
       if (argv.username) {
-        logger.debug('Pre-filling email with %s', argv.username);
+        logger.debug(`Pre-filling email with ${argv.username}`);
 
         await selector.type(argv.username);
       }
@@ -262,16 +289,18 @@ const credentialsManager = new CredentialsManager(logger, {
       await page.waitForResponse('https://signin.aws.amazon.com/saml');
     } catch (e) {
       if (/Target closed/.test(e.message)) {
-        logger.error('Browser closed outside running context, exiting');
+        logger.debug('Browser closed outside running context, exiting');
         return;
       }
 
-      logger.error(e);
+      logger.debug('An error has ocurred while authenticating in headful mode', e);
+
+      spinner.fail(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
     }
   }
 
   if (!isAuthenticated && !argv.headful) {
-    logger.info('User is not authenticated, spawning headful instance');
+    spinner.warn('User is not authenticated, spawning headful instance');
 
     const args = [__filename, '--headful', ...process.argv.slice(2)];
     const ui = childProcess.spawn(process.execPath, args, { stdio: 'inherit' });
