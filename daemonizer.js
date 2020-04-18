@@ -54,7 +54,8 @@ class Daemonizer {
 
   async install(platform, googleIdpId, googleSpId, username, daemonOutLogPath, daemonErrorLogPath) {
     if (platform !== 'darwin') {
-      return this.logger.error('Sorry, this feature is only available on macOS at this time');
+      this.logger.error('Sorry, this feature is only available on macOS at this time');
+      return;
     }
 
     return await this.installMacOS(googleIdpId, googleSpId, username, daemonOutLogPath, daemonErrorLogPath);
