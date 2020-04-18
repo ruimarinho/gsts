@@ -5,7 +5,6 @@
 
 const { parse } = require('querystring');
 const Saml = require('libsaml');
-const errors = require('./errors');
 
 // Regex pattern for Role.
 const REGEX_PATTERN_ROLE = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
@@ -23,36 +22,25 @@ class Parser {
     this.logger = logger;
   }
 
-  async parseSamlResponse(response, customRole) {
+  async parseSamlResponse(response) {
     const samlAssertion = unescape(parse(response).SAMLResponse);
     const saml = new Saml(samlAssertion);
-
-    this.logger.debug('Parsed SAML assertion %O', saml.parsedSaml);
-
-    const principals = [];
     const roles = [];
 
+    this.logger.debug('Parsed SAML assertion %o', saml.parsedSaml);
+
     for (const attribute of saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role')) {
-      let matches = attribute.match(REGEX_PATTERN_PRINCIPAL);
-      if (matches) {
-        principals.push(matches[0]);
+      let principalMatches = attribute.match(REGEX_PATTERN_PRINCIPAL);
+      let roleMatches = attribute.match(REGEX_PATTERN_ROLE);
+
+      if (!principalMatches || !roleMatches) {
+        return;
       }
 
-      matches = attribute.match(REGEX_PATTERN_ROLE);
-      if (matches) {
-        roles.push(matches[0]);
-      }
+      roles.push(new Role(roleMatches[0], principalMatches[0]))
     }
 
-    if (customRole && roles.indexOf(customRole) === -1) {
-      let error = new Error(errors.ROLE_NOT_FOUND_ERROR);
-      error.roles = roles;
-      throw error;
-    }
-
-    const roleArn = customRole || roles[0];
-    const principalIndex = customRole ? roles.indexOf(customRole) : 0;
-    const principalArn = principals[principalIndex];
+    this.logger.debug('Parsed Role attribute with value %o', roles);
 
     let sessionDuration;
 
@@ -60,20 +48,24 @@ class Parser {
       for (const attribute of saml.parsedSaml.attributes) {
         if (attribute.name === 'https://aws.amazon.com/SAML/Attributes/SessionDuration') {
           sessionDuration = Number(attribute.value[0]);
-          this.logger.debug('Found SessionDuration attribute %s', sessionDuration);
+          this.logger.debug('Parsed SessionDuration attribute with value %d', sessionDuration);
         }
       }
     }
 
-    this.logger.debug('Found Role ARN %s', roleArn);
-    this.logger.debug('Found Principal ARN %s', principalArn);
 
     return {
       sessionDuration,
-      principalArn,
-      roleArn,
+      roles,
       samlAssertion
     };
+  }
+}
+
+class Role {
+  constructor(roleArn, principalArn) {
+    this.roleArn = roleArn;
+    this.principalArn = principalArn;
   }
 }
 

@@ -15,6 +15,7 @@ const open = require('open');
 const path = require('path');
 const paths = require('env-paths')('gsts', { suffix: '' });
 const puppeteer = require('puppeteer-extra');
+const prompts = require('prompts');
 const trash = require('trash');
 
 // Default session duration, as states on AWS documentation.
@@ -181,9 +182,40 @@ const credentialsManager = new CredentialsManager(logger, {
       isAuthenticated = true;
 
       try {
-        await credentialsManager.assumeRoleWithSAML(request._postData, argv.awsSharedCredentialsFile, argv.awsProfile, argv.awsRoleArn);
+        const { samlAssertion, roles, sessionDuration } = await credentialsManager.prepareRoleWithSAML(request._postData, argv.awsRoleArn);
+        let role = roles[0];
 
-        logger.info(`Login successful${ argv.verbose ? ` stored in ${argv.awsSharedCredentialsFile} with AWS profile "${argv.awsProfile}" and ARN role ${argv.awsRoleArn}` : '!' }`);
+        if (roles.length > 1) {
+          if (process.stdout.isTTY) {
+            const choices = roles.reduce((accumulator, role) => {
+              accumulator.push({ title: role.roleArn })
+              return accumulator;
+            }, []);
+
+            const response = await prompts([{
+              type: 'select',
+              name: 'arn',
+              message: 'Select a role to authenticate with:',
+              choices
+            }]);
+
+            if (!response.arn) {
+              request.abort();
+              logger.error('You must choose one of the available role ARNs to authenticate or, alternatively, set one directly using the --aws-role-arn option');
+              return;
+            }
+
+            role = roles[response.arn];
+
+            logger.info(`You may skip this step by invoking gsts with --aws-role-arn=${role.roleArn}`);
+          } else {
+            logger.debug(`Assuming role "${role.roleArn}" from the list of available roles %o due to non-interactive mode`, roles);
+          }
+        }
+
+        await credentialsManager.assumeRoleWithSAML(samlAssertion, argv.awsSharedCredentialsFile, argv.awsProfile, role, sessionDuration);
+
+        logger.info(`Login successful${ argv.verbose ? ` and credentials stored in "${argv.awsSharedCredentialsFile}" under AWS profile "${argv.awsProfile}" with role ARN "${role.roleArn}"` : '!' }`);
       } catch (e) {
         if (e.message === errors.ROLE_NOT_FOUND_ERROR) {
           logger.error(`Role ARN "%s" not found in the available list of roles %s`, argv.awsRoleArn, JSON.stringify(e.roles));
@@ -191,8 +223,8 @@ const credentialsManager = new CredentialsManager(logger, {
           return;
         }
 
-        if (e.code === 'ValidationError') {
-          logger.error(e.message);
+        if (['ValidationError', 'InvalidIdentityToken'].includes(e.code)) {
+          logger.error(`A remote error ocurred while assuming role: ${e.message}`);
           request.abort();
           return;
         }

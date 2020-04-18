@@ -6,6 +6,7 @@
 const { dirname } = require('path');
 const Parser = require('./parser');
 const STS = require('aws-sdk/clients/sts');
+const errors = require('./errors');
 const fs = require('fs').promises;
 const ini = require('ini');
 
@@ -22,20 +23,49 @@ class CredentialsManager {
     this.parser = new Parser(logger);
   }
 
+  async prepareRoleWithSAML(samlResponse, customRoleArn) {
+    const { sessionDuration, roles, samlAssertion } = await this.parser.parseSamlResponse(samlResponse, customRoleArn);
+
+    if (!customRoleArn) {
+      this.logger.debug('A custom role ARN not been set so returning all parsed roles');
+
+      return {
+        roles,
+        samlAssertion,
+        sessionDuration
+      }
+    }
+
+    const customRole = roles.find(role => role.roleArn === customRoleArn);
+
+    if (!customRole) {
+      let error = new Error(errors.ROLE_NOT_FOUND_ERROR);
+      error.roles = roles;
+      throw error;
+    }
+
+    this.logger.debug('Found custom role ARN "%s" with principal ARN "%s"', customRole.roleArn, customRole.principalArn);
+
+    return {
+      roles: [customRole],
+      samlAssertion,
+      sessionDuration
+    }
+  }
+
   /**
    * Parse SAML response and assume role-.
    */
 
-  async assumeRoleWithSAML(samlResponse, awsSharedCredentialsFile, awsProfile, awsRole) {
-    const { sessionDuration, principalArn, roleArn, samlAssertion } = await this.parser.parseSamlResponse(samlResponse, awsRole);
+  async assumeRoleWithSAML(samlAssertion, awsSharedCredentialsFile, awsProfile, role, sessionDuration) {
     const awsResponse = await (new STS()).assumeRoleWithSAML({
       DurationSeconds: sessionDuration || this.sessionDefaultDuration,
-      PrincipalArn: principalArn,
-      RoleArn: roleArn,
+      PrincipalArn: role.principalArn,
+      RoleArn: role.roleArn,
       SAMLAssertion: samlAssertion
     }).promise();
 
-    this.logger.debug('Role has been assumed %O', awsResponse);
+    this.logger.debug('Role ARN "%s" has been assumed %O', role.roleArn, awsResponse);
 
     await this.saveCredentials(awsSharedCredentialsFile, awsProfile, {
       accessKeyId: awsResponse.Credentials.AccessKeyId,
@@ -95,7 +125,7 @@ class CredentialsManager {
     await fs.mkdir(dirname(path), { recursive: true });
     await fs.writeFile(path, ini.encode(credentials))
 
-    this.logger.debug('Config file %O', credentials);
+    this.logger.debug('The credentials have been stored in "%s" under AWS profile "%s" with contents %o', path, profile, credentials);
   }
 
   /**

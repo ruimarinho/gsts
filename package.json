@@ -32,6 +32,7 @@
     "libsaml": "^1.0.0",
     "open": "^7.0.3",
     "plist": "^3.0.1",
+    "prompts": "^2.3.2",
     "puppeteer": "^2.1.1",
     "puppeteer-extra": "^3.1.9",
     "puppeteer-extra-plugin-stealth": "^2.4.9",
