@@ -16,7 +16,7 @@ const ini = require('ini');
  */
 
 class CredentialsManager {
-  constructor(logger, { sessionDefaultDuration, sessionExpirationDelta }) {
+  constructor(logger, { sessionDefaultDuration, sessionExpirationDelta } = {}) {
     this.logger = logger;
     this.sessionDefaultDuration = sessionDefaultDuration;
     this.sessionExpirationDelta = sessionExpirationDelta;
@@ -32,16 +32,14 @@ class CredentialsManager {
       return {
         roles,
         samlAssertion,
-        sessionDuration
+        sessionDuration: sessionDuration || this.sessionDefaultDuration
       }
     }
 
     const customRole = roles.find(role => role.roleArn === customRoleArn);
 
     if (!customRole) {
-      let error = new Error(errors.ROLE_NOT_FOUND_ERROR);
-      error.roles = roles;
-      throw error;
+      throw new errors.RoleNotFoundError(roles);
     }
 
     this.logger.debug('Found custom role ARN "%s" with principal ARN "%s"', customRole.roleArn, customRole.principalArn);
@@ -49,7 +47,7 @@ class CredentialsManager {
     return {
       roles: [customRole],
       samlAssertion,
-      sessionDuration
+      sessionDuration: sessionDuration || this.sessionDefaultDuration
     }
   }
 
@@ -59,7 +57,7 @@ class CredentialsManager {
 
   async assumeRoleWithSAML(samlAssertion, awsSharedCredentialsFile, awsProfile, role, sessionDuration) {
     const awsResponse = await (new STS()).assumeRoleWithSAML({
-      DurationSeconds: sessionDuration || this.sessionDefaultDuration,
+      DurationSeconds: sessionDuration,
       PrincipalArn: role.principalArn,
       RoleArn: role.roleArn,
       SAMLAssertion: samlAssertion
@@ -70,7 +68,7 @@ class CredentialsManager {
     await this.saveCredentials(awsSharedCredentialsFile, awsProfile, {
       accessKeyId: awsResponse.Credentials.AccessKeyId,
       secretAccessKey: awsResponse.Credentials.SecretAccessKey,
-      expiration: awsResponse.Credentials.Expiration,
+      sessionExpiration: awsResponse.Credentials.Expiration,
       sessionToken: awsResponse.Credentials.SessionToken
     });
   }
@@ -108,7 +106,7 @@ class CredentialsManager {
    * Save AWS credentials to a profile section.
    */
 
-  async saveCredentials(path, profile, { accessKeyId, secretAccessKey, expiration, sessionToken }) {
+  async saveCredentials(path, profile, { accessKeyId, secretAccessKey, sessionExpiration, sessionToken }) {
     // The config file may have other profiles configured, so parse existing data instead of writing a new file instead.
     let credentials = await this.loadCredentials(path);
 
@@ -119,7 +117,7 @@ class CredentialsManager {
     credentials[profile] = {};
     credentials[profile].aws_access_key_id = accessKeyId;
     credentials[profile].aws_secret_access_key = secretAccessKey;
-    credentials[profile].aws_session_expiration = expiration.toISOString();
+    credentials[profile].aws_session_expiration = sessionExpiration.toISOString();
     credentials[profile].aws_session_token = sessionToken;
 
     await fs.mkdir(dirname(path), { recursive: true });

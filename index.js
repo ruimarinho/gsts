@@ -233,7 +233,7 @@ const credentialsManager = new CredentialsManager(logger, {
       } catch (e) {
         logger.debug('An error has ocurred while authenticating', e);
 
-        if (e.message === errors.ROLE_NOT_FOUND_ERROR) {
+        if (e instanceof errors.RoleNotFoundError) {
           request.abort();
           spinner.fail(`Role ARN "${argv.awsRoleArn}" not found in the list of available roles ${JSON.stringify(e.roles)}`);
           return;

@@ -4,5 +4,10 @@
  */
 
 module.exports = {
-  ROLE_NOT_FOUND_ERROR: 'EROLE_NOT_FOUND_ERROR'
+  RoleNotFoundError: class RoleNotFoundError extends Error {
+      constructor(roles) {
+          super('Custom role not found');
+          this.roles = roles;
+      }
+  }
 }

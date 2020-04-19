@@ -4,6 +4,7 @@
  */
 
 const { parse } = require('querystring');
+const Role = require('./role');
 const Saml = require('libsaml');
 
 // Regex pattern for Role.
@@ -42,30 +43,19 @@ class Parser {
 
     this.logger.debug('Parsed Role attribute with value %o', roles);
 
-    let sessionDuration;
+    let [sessionDuration] = saml.getAttribute('https://aws.amazon.com/SAML/Attributes/SessionDuration');
 
-    if (saml.parsedSaml.attributes) {
-      for (const attribute of saml.parsedSaml.attributes) {
-        if (attribute.name === 'https://aws.amazon.com/SAML/Attributes/SessionDuration') {
-          sessionDuration = Number(attribute.value[0]);
-          this.logger.debug('Parsed SessionDuration attribute with value %d', sessionDuration);
-        }
-      }
+    if (sessionDuration) {
+      sessionDuration = Number(sessionDuration);
+
+      this.logger.debug('Parsed SessionDuration attribute with value %d', sessionDuration);
     }
-
 
     return {
       sessionDuration,
       roles,
       samlAssertion
     };
-  }
-}
-
-class Role {
-  constructor(roleArn, principalArn) {
-    this.roleArn = roleArn;
-    this.principalArn = principalArn;
   }
 }
 
