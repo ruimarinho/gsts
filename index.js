@@ -42,6 +42,10 @@ const argv = require('yargs')
     'aws-role-arn': {
       description: 'AWS role ARN to authenticate with'
     },
+    'aws-session-duration': {
+      description: `AWS session duration in seconds (defaults to the value provided by Google, and if that is not provided then ${SESSION_DEFAULT_DURATION})`,
+      type: 'number'
+    },
     'aws-shared-credentials-file': {
       description: 'AWS shared credentials file',
       default: path.join(homedir, '.aws', 'credentials')
@@ -119,10 +123,7 @@ const daemonizer = new Daemonizer(logger);
  * Create instance of CredentialsManager with logger.
  */
 
-const credentialsManager = new CredentialsManager(logger, {
-  sessionDefaultDuration: SESSION_DEFAULT_DURATION,
-  sessionExpirationDelta: SESSION_EXPIRATION_DELTA
-});
+const credentialsManager = new CredentialsManager(logger);
 
 /**
  * Main execution routine which handles command-line flags.
@@ -191,7 +192,8 @@ const credentialsManager = new CredentialsManager(logger, {
       isAuthenticated = true;
 
       try {
-        const { samlAssertion, roles, sessionDuration } = await credentialsManager.prepareRoleWithSAML(request._postData, argv.awsRoleArn);
+        const { samlAssertion, roles } = await credentialsManager.prepareRoleWithSAML(request._postData, argv.awsRoleArn);
+
         let role = roles[0];
 
         if (roles.length > 1) {

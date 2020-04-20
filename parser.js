@@ -8,10 +8,10 @@ const Role = require('./role');
 const Saml = require('libsaml');
 
 // Regex pattern for Role.
-const REGEX_PATTERN_ROLE = /arn:aws:iam:[^:]*:[0-9]+:role\/[^,]+/i;
+const REGEX_PATTERN_ROLE = /(?<roleArn>arn:aws:iam:[^:]*:[0-9]+:role\/(?<name>[^,]+))/i;
 
 // Regex pattern for Principal (SAML Provider).
-const REGEX_PATTERN_PRINCIPAL = /arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+/i;
+const REGEX_PATTERN_PRINCIPAL = /(?<samlProvider>arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+)/i;
 
 /**
  * Process a SAML response and extract all relevant data to be exchanged for an
@@ -30,6 +30,14 @@ class Parser {
 
     this.logger.debug('Parsed SAML assertion %o', saml.parsedSaml);
 
+    let [idpSessionDuration] = saml.getAttribute('https://aws.amazon.com/SAML/Attributes/SessionDuration');
+
+    if (idpSessionDuration) {
+      idpSessionDuration = Number(idpSessionDuration);
+
+      this.logger.debug('Parsed default IDP SessionDuration attribute with value %d', idpSessionDuration);
+    }
+
     for (const attribute of saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role')) {
       let principalMatches = attribute.match(REGEX_PATTERN_PRINCIPAL);
       let roleMatches = attribute.match(REGEX_PATTERN_ROLE);
@@ -38,21 +46,12 @@ class Parser {
         return;
       }
 
-      roles.push(new Role(roleMatches[0], principalMatches[0]))
+      roles.push(new Role(roleMatches.groups.name, roleMatches.groups.roleArn, principalMatches.groups.samlProvider, idpSessionDuration))
     }
 
     this.logger.debug('Parsed Role attribute with value %o', roles);
 
-    let [sessionDuration] = saml.getAttribute('https://aws.amazon.com/SAML/Attributes/SessionDuration');
-
-    if (sessionDuration) {
-      sessionDuration = Number(sessionDuration);
-
-      this.logger.debug('Parsed SessionDuration attribute with value %d', sessionDuration);
-    }
-
     return {
-      sessionDuration,
       roles,
       samlAssertion
     };

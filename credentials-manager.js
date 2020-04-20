@@ -5,10 +5,15 @@
 
 const { dirname } = require('path');
 const Parser = require('./parser');
+const IAM = require('aws-sdk/clients/iam');
 const STS = require('aws-sdk/clients/sts');
 const errors = require('./errors');
 const fs = require('fs').promises;
 const ini = require('ini');
+
+// Delta (in seconds) between exact expiration date and current date to avoid requests
+// on the same second to fail.
+const SESSION_EXPIRATION_DELTA = 30e3; // 30 seconds
 
 /**
  * Process a SAML response and extract all relevant data to be exchanged for an
@@ -16,23 +21,21 @@ const ini = require('ini');
  */
 
 class CredentialsManager {
-  constructor(logger, { sessionDefaultDuration, sessionExpirationDelta } = {}) {
+  constructor(logger) {
     this.logger = logger;
-    this.sessionDefaultDuration = sessionDefaultDuration;
-    this.sessionExpirationDelta = sessionExpirationDelta;
+    this.sessionExpirationDelta = SESSION_EXPIRATION_DELTA;
     this.parser = new Parser(logger);
   }
 
-  async prepareRoleWithSAML(samlResponse, customRoleArn) {
-    const { sessionDuration, roles, samlAssertion } = await this.parser.parseSamlResponse(samlResponse, customRoleArn);
+  async prepareRoleWithSAML(response, customRoleArn) {
+    const { roles, samlAssertion } = await this.parser.parseSamlResponse(response, customRoleArn);
 
     if (!customRoleArn) {
       this.logger.debug('A custom role ARN not been set so returning all parsed roles');
 
       return {
         roles,
-        samlAssertion,
-        sessionDuration: sessionDuration || this.sessionDefaultDuration
+        samlAssertion
       }
     }
 
@@ -46,8 +49,7 @@ class CredentialsManager {
 
     return {
       roles: [customRole],
-      samlAssertion,
-      sessionDuration: sessionDuration || this.sessionDefaultDuration
+      samlAssertion
     }
   }
 
@@ -55,21 +57,37 @@ class CredentialsManager {
    * Parse SAML response and assume role-.
    */
 
-  async assumeRoleWithSAML(samlAssertion, awsSharedCredentialsFile, awsProfile, role, sessionDuration) {
-    const awsResponse = await (new STS()).assumeRoleWithSAML({
+  async assumeRoleWithSAML(samlAssertion, awsSharedCredentialsFile, awsProfile, role, customSessionDuration) {
+    let sessionDuration = role.sessionDuration;
+
+    if (customSessionDuration) {
+      sessionDuration = customSessionDuration;
+
+      const iamResponse = await (new IAM()).getRole({
+        RoleName: role.name
+      }).promise();
+
+      if (customSessionDuration > iamResponse.Role.MaxSessionDuration) {
+        sessionDuration = iamResponse.Role.MaxSessionDuration;
+
+        this.logger.warn('Custom session duration %d exceeds maximum session duration of %d allowed for role. Please set --aws-session-duration=%d or $AWS_SESSION_DURATION=%d to surpress this warning', customSessionDuration, iamResponse.Role.MaxSessionDuration, iamResponse.Role.MaxSessionDuration, iamResponse.Role.MaxSessionDuration);
+      }
+    }
+
+    const stsResponse = await (new STS()).assumeRoleWithSAML({
       DurationSeconds: sessionDuration,
       PrincipalArn: role.principalArn,
       RoleArn: role.roleArn,
       SAMLAssertion: samlAssertion
     }).promise();
 
-    this.logger.debug('Role ARN "%s" has been assumed %O', role.roleArn, awsResponse);
+    this.logger.debug('Role ARN "%s" has been assumed %O', role.roleArn, stsResponse);
 
     await this.saveCredentials(awsSharedCredentialsFile, awsProfile, {
-      accessKeyId: awsResponse.Credentials.AccessKeyId,
-      secretAccessKey: awsResponse.Credentials.SecretAccessKey,
-      sessionExpiration: awsResponse.Credentials.Expiration,
-      sessionToken: awsResponse.Credentials.SessionToken
+      accessKeyId: stsResponse.Credentials.AccessKeyId,
+      secretAccessKey: stsResponse.Credentials.SecretAccessKey,
+      sessionExpiration: stsResponse.Credentials.Expiration,
+      sessionToken: stsResponse.Credentials.SessionToken
     });
   }
 

@@ -5,7 +5,11 @@
  */
 
 module.exports = class Role {
-  constructor(roleArn, principalArn) {
+  constructor(name, roleArn, principalArn, sessionDuration) {
+    if (!name) {
+      throw new Error('Role name is required');
+    }
+
     if (!roleArn) {
       throw new Error('Role ARN is required');
     }
@@ -14,7 +18,9 @@ module.exports = class Role {
       throw new Error('Principal ARN is required');
     }
 
+    this.name = name;
     this.roleArn = roleArn;
     this.principalArn = principalArn;
+    this.sessionDuration = sessionDuration;
   }
 }
