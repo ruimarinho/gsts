@@ -42,6 +42,10 @@ const argv = require('yargs')
     'aws-role-arn': {
       description: 'AWS role ARN to authenticate with'
     },
+    'aws-session-duration': {
+      description: `AWS session duration in seconds (defaults to the value provided by Google, and if that is not provided then ${SESSION_DEFAULT_DURATION})`,
+      type: 'number'
+    },
     'aws-shared-credentials-file': {
       description: 'AWS shared credentials file',
       default: path.join(homedir, '.aws', 'credentials')
@@ -121,6 +125,7 @@ const daemonizer = new Daemonizer(logger);
 
 const credentialsManager = new CredentialsManager(logger, {
   sessionDefaultDuration: SESSION_DEFAULT_DURATION,
+  sessionDurationOverride: argv.awsSessionDuration,
   sessionExpirationDelta: SESSION_EXPIRATION_DELTA
 });
 

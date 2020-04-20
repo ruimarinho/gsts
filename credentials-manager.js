@@ -16,9 +16,10 @@ const ini = require('ini');
  */
 
 class CredentialsManager {
-  constructor(logger, { sessionDefaultDuration, sessionExpirationDelta } = {}) {
+  constructor(logger, { sessionDefaultDuration, sessionDurationOverride, sessionExpirationDelta } = {}) {
     this.logger = logger;
     this.sessionDefaultDuration = sessionDefaultDuration;
+    this.sessionDurationOverride = sessionDurationOverride;
     this.sessionExpirationDelta = sessionExpirationDelta;
     this.parser = new Parser(logger);
   }
@@ -32,7 +33,7 @@ class CredentialsManager {
       return {
         roles,
         samlAssertion,
-        sessionDuration: sessionDuration || this.sessionDefaultDuration
+        sessionDuration: this.sessionDurationOverride || sessionDuration || this.sessionDefaultDuration
       }
     }
 
@@ -47,7 +48,7 @@ class CredentialsManager {
     return {
       roles: [customRole],
       samlAssertion,
-      sessionDuration: sessionDuration || this.sessionDefaultDuration
+      sessionDuration: this.sessionDurationOverride || sessionDuration || this.sessionDefaultDuration
     }
   }
 
