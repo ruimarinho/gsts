@@ -131,7 +131,7 @@ const credentialsManager = new CredentialsManager(logger);
 
 (async () => {
   if (argv._[0] === 'console') {
-    logger.debug('Opening url %s', url);
+    logger.debug('Opening url %s', SAML_URL);
 
     return await open(SAML_URL);
   }
