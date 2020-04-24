@@ -19,13 +19,74 @@ const puppeteer = require('puppeteer-extra');
 const prompts = require('prompts');
 const trash = require('trash');
 
-// Default session duration, as states on AWS documentation.
-// See https://aws.amazon.com/blogs/security/enable-federated-api-access-to-your-aws-resources-for-up-to-12-hours-using-iam-roles/.
-const SESSION_DEFAULT_DURATION = 3600 // 1 hour
-
-// Delta (in ms) between exact expiration date and current date to avoid requests
-// on the same second to fail.
-const SESSION_EXPIRATION_DELTA = 30e3; // 30 seconds
+// Define all available cli options.
+const cliOptions = {
+  'aws-profile': {
+    description: 'AWS profile name for storing credentials',
+    default: 'sts'
+  },
+  'aws-role-arn': {
+    description: 'AWS role ARN to authenticate with'
+  },
+  'aws-session-duration': {
+    description: `AWS session duration in seconds (defaults to the value provided by the IDP, if set)`,
+    type: 'number'
+  },
+  'aws-shared-credentials-file': {
+    description: 'AWS shared credentials file',
+    default: path.join(homedir, '.aws', 'credentials')
+  },
+  'clean': {
+    boolean: false,
+    config: false,
+    description: 'Start authorization from a clean session state'
+  },
+  'daemon': {
+    boolean: false,
+    config: false,
+    description: 'Install daemon service (only on macOS for now)'
+  },
+  'daemon-out-log-path': {
+    description: `Path for storing the output log of the daemon`,
+    default: '/usr/local/var/log/gsts.stdout.log'
+  },
+  'daemon-error-log-path': {
+    description: `Path for storing the error log of the daemon`,
+    default: '/usr/local/var/log/gsts.stderr.log'
+  },
+  'enable-experimental-u2f-support': {
+    boolean: false,
+    description: `Enable experimental U2F support`
+  },
+  'force': {
+    boolean: false,
+    description: 'Force re-authorization even with valid session'
+  },
+  'headful': {
+    boolean: false,
+    config: false,
+    description: 'headful',
+    hidden: true
+  },
+  'idp-id': {
+    alias: 'google-idp-id',
+    description: 'Google Identity Provider ID (IDP ID)',
+    required: true
+  },
+  'sp-id': {
+    alias: 'google-sp-id',
+    description: 'Google Service Provider ID (SP ID)',
+    required: true
+  },
+  'username': {
+    alias: 'google-username',
+    description: 'Google username to auto pre-fill during login'
+  },
+  'verbose': {
+    config: false,
+    description: 'Log verbose output'
+  }
+}
 
 // Parse command line arguments.
 const argv = require('yargs')
@@ -34,69 +95,7 @@ const argv = require('yargs')
   .command('console')
   .count('verbose')
   .alias('v', 'verbose')
-  .options({
-    'aws-profile': {
-      description: 'AWS profile name for storing credentials',
-      default: 'sts'
-    },
-    'aws-role-arn': {
-      description: 'AWS role ARN to authenticate with'
-    },
-    'aws-session-duration': {
-      description: `AWS session duration in seconds (defaults to the value provided by Google, and if that is not provided then ${SESSION_DEFAULT_DURATION})`,
-      type: 'number'
-    },
-    'aws-shared-credentials-file': {
-      description: 'AWS shared credentials file',
-      default: path.join(homedir, '.aws', 'credentials')
-    },
-    'clean': {
-      boolean: false,
-      description: 'Start authorization from a clean session state'
-    },
-    'daemon': {
-      boolean: false,
-      description: 'Install daemon service (only on macOS for now)'
-    },
-    'daemon-out-log-path': {
-      description: `Path for storing the output log of the daemon`,
-      default: '/usr/local/var/log/gsts.stdout.log'
-    },
-    'daemon-error-log-path': {
-      description: `Path for storing the error log of the daemon`,
-      default: '/usr/local/var/log/gsts.stderr.log'
-    },
-    'enable-experimental-u2f-support': {
-      boolean: false,
-      description: `Enable experimental U2F support`
-    },
-    'force': {
-      boolean: false,
-      description: 'Force re-authorization even with valid session'
-    },
-    'headful': {
-      boolean: false,
-      description: 'headful',
-      hidden: true
-    },
-    'idp-id': {
-      alias: 'google-idp-id',
-      description: 'Google Identity Provider ID (IDP ID)',
-      required: true
-    },
-    'sp-id': {
-      alias: 'google-sp-id',
-      description: 'Google Service Provider ID (SP ID)',
-      required: true
-    },
-    'username': {
-      alias: 'google-username',
-      description: 'Google username to auto pre-fill during login'
-    },
-    'verbose': {
-      description: 'Log verbose output'
-    }
-  })
+  .options(cliOptions)
   .strictCommands()
   .argv;
 
@@ -117,7 +116,17 @@ const logger = new Logger(process.stdout, process.stderr, argv.verbose);
  * Create instance of Daemonizer with logger.
  */
 
-const daemonizer = new Daemonizer(logger);
+const configArgs = {};
+
+for (const key in cliOptions) {
+  if (cliOptions[key].config === false) {
+    continue;
+  }
+
+  configArgs[key] = argv[key];
+}
+
+const daemonizer = new Daemonizer(logger, configArgs);
 
 /**
  * Create instance of CredentialsManager with logger.
@@ -137,7 +146,7 @@ const credentialsManager = new CredentialsManager(logger);
   }
 
   if (argv.daemon) {
-    return await daemonizer.install(process.platform, argv.googleIdpId, argv.googleSpId, argv.username, argv.daemonOutLogPath, argv.daemonErrorLogPath);
+    return await daemonizer.install(process.platform);
   }
 
   if (argv.clean) {

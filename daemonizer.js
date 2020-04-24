@@ -17,7 +17,8 @@ const PROJECT_NAMESPACE = 'io.github.ruimarinho.gsts';
  */
 
 class Daemonizer {
-  constructor(logger) {
+  constructor(logger, args) {
+    this.args = args;
     this.logger = logger;
   }
 
@@ -25,11 +26,15 @@ class Daemonizer {
    * Generate a launch agent plist based on dynamic values.
    */
 
-  generateLaunchAgentPlist(idpId, spId, username, outLogPath, errorLogPath) {
-    const programArguments = ['/usr/local/bin/gsts', `--idp-id=${idpId}`, `--sp-id=${spId}`]
+  generateLaunchAgentPlist() {
+    const programArguments = ['/usr/local/bin/gsts']
 
-    if (username) {
-      programArguments.push(`--username=${username}`);
+    for (let [key, value] of Object.entries(this.args)) {
+      if (key.includes('daemon') || value === undefined) {
+        continue;
+      }
+
+      programArguments.push(`--${key}${typeof value === 'boolean' ? '' : `=${value}`}`);
     }
 
     const payload = {
@@ -39,8 +44,8 @@ class Daemonizer {
       },
       RunAtLoad: true,
       StartInterval: 600,
-      StandardErrorPath: errorLogPath,
-      StandardOutPath: outLogPath,
+      StandardErrorPath: this.args['daemon-out-log-path'],
+      StandardOutPath: this.args['daemon-error-log-path'],
       ProgramArguments: programArguments
     };
 
@@ -52,16 +57,16 @@ class Daemonizer {
    * from the user's home directory.
    */
 
-  async install(platform, googleIdpId, googleSpId, username, daemonOutLogPath, daemonErrorLogPath) {
+  async install(platform) {
     if (platform !== 'darwin') {
       this.logger.error('Sorry, this feature is only available on macOS at this time');
       return;
     }
 
-    return await this.installMacOS(googleIdpId, googleSpId, username, daemonOutLogPath, daemonErrorLogPath);
+    return await this.installMacOS();
   }
 
-  async installMacOS(googleIdpId, googleSpId, username, daemonOutLogPath, daemonErrorLogPath) {
+  async installMacOS() {
     // LaunchAgents plist path.
     const plistPath = path.join(homedir, 'Library', 'LaunchAgents', `${PROJECT_NAMESPACE}.plist`);
 
@@ -83,7 +88,7 @@ class Daemonizer {
       this.logger.error(error);
     });
 
-    const plist = this.generateLaunchAgentPlist(googleIdpId, googleSpId, username, daemonOutLogPath, daemonErrorLogPath).toString();
+    const plist = this.generateLaunchAgentPlist().toString();
 
     this.logger.debug('Generated launch agent plist file %s', plist);
 
