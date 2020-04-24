@@ -17,6 +17,18 @@ const fs = require('fs').promises;
 const SAML_SESSION_BASIC = 'saml-session-basic';
 
 /**
+ * SAML response with a single AWS GovCloud (US) role ARN.
+ */
+
+const SAML_SESSION_BASIC_GOV_CLOUD_US = 'saml-session-basic-gov-cloud-us';
+
+/**
+ * SAML response with a single AWS China role ARN.
+ */
+
+const SAML_SESSION_BASIC_CN = 'saml-session-basic-cn';
+
+/**
  * SAML response with a custom session duration parameter.
  */
 
@@ -46,6 +58,8 @@ async function getSampleAssertion(name) {
 
 module.exports = {
   SAML_SESSION_BASIC,
+  SAML_SESSION_BASIC_GOV_CLOUD_US,
+  SAML_SESSION_BASIC_CN,
   SAML_SESSION_BASIC_WITH_SESSION_DURATION,
   SAML_SESSION_BASIC_WITH_MULTIPLE_ROLES,
   getResponseFromAssertion,

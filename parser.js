@@ -8,7 +8,7 @@ const Role = require('./role');
 const Saml = require('libsaml');
 
 // Regex pattern for Role.
-const REGEX_PATTERN_ROLE = /(?<roleArn>arn:aws:iam:[^:]*:[0-9]+:role\/(?<name>[^,]+))/i;
+const REGEX_PATTERN_ROLE = /(?<roleArn>arn:(aws|aws-us-gov|aws-cn):iam:[^:]*:[0-9]+:role\/(?<name>[^,]+))/i;
 
 // Regex pattern for Principal (SAML Provider).
 const REGEX_PATTERN_PRINCIPAL = /(?<samlProvider>arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+)/i;
@@ -43,7 +43,7 @@ class Parser {
       let roleMatches = attribute.match(REGEX_PATTERN_ROLE);
 
       if (!principalMatches || !roleMatches) {
-        return;
+        continue;
       }
 
       roles.push(new Role(roleMatches.groups.name, roleMatches.groups.roleArn, principalMatches.groups.samlProvider, idpSessionDuration))

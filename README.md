@@ -15,6 +15,7 @@ The problem is that this flow is tailored for the web which makes command-line u
 * Compatible with Amazon ECR.
 * Daemon helper for continously refreshing the STS token (only available on macOS for now).
 * Offers a quick action to open the AWS console from the command-line.
+* Support for AWS China (`aws-cn`) and AWS GovCloud (US) (`aws-us-gov`) ARNs.
 
 ## Installation
 
