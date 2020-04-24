@@ -5,7 +5,6 @@
 
 const { dirname } = require('path');
 const Parser = require('./parser');
-const IAM = require('aws-sdk/clients/iam');
 const STS = require('aws-sdk/clients/sts');
 const errors = require('./errors');
 const fs = require('fs').promises;
@@ -14,6 +13,9 @@ const ini = require('ini');
 // Delta (in seconds) between exact expiration date and current date to avoid requests
 // on the same second to fail.
 const SESSION_EXPIRATION_DELTA = 30e3; // 30 seconds
+
+// Regex pattern for duration seconds validation error.
+const REGEX_PATTERN_DURATION_SECONDS = /value less than or equal to (?<duration>[0-9]+)/
 
 /**
  * Process a SAML response and extract all relevant data to be exchanged for an
@@ -63,14 +65,25 @@ class CredentialsManager {
     if (customSessionDuration) {
       sessionDuration = customSessionDuration;
 
-      const iamResponse = await (new IAM()).getRole({
-        RoleName: role.name
-      }).promise();
+      try {
+        await (new STS()).assumeRoleWithSAML({
+          DurationSeconds: sessionDuration,
+          PrincipalArn: role.principalArn,
+          RoleArn: role.roleArn,
+          SAMLAssertion: samlAssertion
+        }).promise();
+      } catch (e) {
+        if (e.code !== 'ValidationError' ||  !/durationSeconds/.test(e.message)) {
+          throw e;
+        }
 
-      if (customSessionDuration > iamResponse.Role.MaxSessionDuration) {
-        sessionDuration = iamResponse.Role.MaxSessionDuration;
+        let matches = e.message.match(REGEX_PATTERN_DURATION_SECONDS)
 
-        this.logger.warn('Custom session duration %d exceeds maximum session duration of %d allowed for role. Please set --aws-session-duration=%d or $AWS_SESSION_DURATION=%d to surpress this warning', customSessionDuration, iamResponse.Role.MaxSessionDuration, iamResponse.Role.MaxSessionDuration, iamResponse.Role.MaxSessionDuration);
+        if (matches && matches.groups.duration) {
+          sessionDuration = Number(matches.groups.duration);
+
+          this.logger.warn('Custom session duration %d exceeds maximum session duration of %d allowed for role. Please set --aws-session-duration=%d or $AWS_SESSION_DURATION=%d to surpress this warning', customSessionDuration, sessionDuration, sessionDuration, sessionDuration);
+        }
       }
     }
 
