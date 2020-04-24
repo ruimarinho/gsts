@@ -110,7 +110,7 @@ const SAML_URL = `https://accounts.google.com/o/saml2/initsso?idpid=${argv.googl
  * detailed logging with timestamps.
  */
 
-const logger = new Logger(process.stdout, process.stderr, argv.verbose);
+const logger = new Logger(argv.verbose, process.stderr.isTTY);
 
 /**
  * Create instance of Daemonizer with logger.
@@ -155,10 +155,8 @@ const credentialsManager = new CredentialsManager(logger);
     await trash(paths.data);
   }
 
-  const spinner = ora({ isEnabled: !argv.verbose });
-
   if (!argv.headful) {
-   spinner.start('Logging in');
+   logger.start('Logging in');
   }
 
   let isAuthenticated = false;
@@ -167,11 +165,14 @@ const credentialsManager = new CredentialsManager(logger);
     let session = await credentialsManager.getSessionExpirationFromCredentials(argv.awsSharedCredentialsFile, argv.awsProfile);
 
     if (!argv.force && session.isValid) {
-      logger.debug('Skipping re-authorization as session is valid until %s. Use --force to ignore.', new Date(session.expiresAt));
-
       isAuthenticated = true;
 
-      spinner.info('Login is still valid, no need to re-authorize!');
+      if (argv.verbose) {
+        logger.debug('Skipping re-authorization as session is valid until %s. Use --force to ignore.', new Date(session.expiresAt));
+      } else {
+        logger.info('Login is still valid, no need to re-authorize!');
+      }
+
       return;
     }
   }
@@ -206,7 +207,7 @@ const credentialsManager = new CredentialsManager(logger);
         let role = roles[0];
 
         if (roles.length > 1) {
-          spinner.stop();
+          logger.stop();
 
           if (process.stdout.isTTY) {
             const choices = roles.reduce((accumulator, role) => {
@@ -223,41 +224,42 @@ const credentialsManager = new CredentialsManager(logger);
 
             if (!response.hasOwnProperty('arn')) {
               request.abort();
-              spinner.fail('You must choose one of the available role ARNs to authenticate or, alternatively, set one directly using the --aws-role-arn option');
+              logger.fail('You must choose one of the available role ARNs to authenticate or, alternatively, set one directly using the --aws-role-arn option');
               return;
             }
 
-
             role = roles[response.arn];
 
-            spinner.info(`You may skip this step by invoking gsts with --aws-role-arn=${role.roleArn}`);
+            logger.info(`You may skip this step by invoking gsts with --aws-role-arn=${role.roleArn}`);
           } else {
             logger.debug(`Assuming role "${role.roleArn}" from the list of available roles %o due to non-interactive mode`, roles);
           }
         }
 
-        await credentialsManager.assumeRoleWithSAML(samlAssertion, argv.awsSharedCredentialsFile, argv.awsProfile, role, sessionDuration);
+        await credentialsManager.assumeRoleWithSAML(samlAssertion, argv.awsSharedCredentialsFile, argv.awsProfile, role, argv.awsSessionDuration);
 
-        logger.debug(`Login successful${ argv.verbose ? ` and credentials stored in "${argv.awsSharedCredentialsFile}" under AWS profile "${argv.awsProfile}" with role ARN "${role.roleArn}"` : '!' }`);
-
-        spinner.succeed('Login successful!');
+        if (argv.verbose) {
+          logger.debug(`Login successful${ argv.verbose ? ` and credentials stored in "${argv.awsSharedCredentialsFile}" under AWS profile "${argv.awsProfile}" with role ARN "${role.roleArn}"` : '!' }`);
+        } else {
+          logger.succeed('Login successful!');
+        }
       } catch (e) {
         logger.debug('An error has ocurred while authenticating', e);
 
         if (e instanceof errors.RoleNotFoundError) {
           request.abort();
-          spinner.fail(`Role ARN "${argv.awsRoleArn}" not found in the list of available roles ${JSON.stringify(e.roles)}`);
+          logger.fail(`Role ARN "${argv.awsRoleArn}" not found in the list of available roles ${JSON.stringify(e.roles)}`);
           return;
         }
 
         if (['ValidationError', 'InvalidIdentityToken'].includes(e.code)) {
           request.abort();
-          spinner.fail(`A remote error ocurred while assuming role: ${e.message}`);
+          logger.fail(`A remote error ocurred while assuming role: ${e.message}`);
           return;
         }
 
         request.abort();
-        spinner.fail(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
+        logger.fail(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
         return;
       }
 
@@ -304,14 +306,16 @@ const credentialsManager = new CredentialsManager(logger);
         return;
       }
 
-      logger.debug('An error has ocurred while authenticating in headful mode', e);
-
-      spinner.fail(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
+      if (argv.verbose) {
+        logger.debug('An unknown error has ocurred while authenticating in headful mode', e);
+      } else {
+        logger.fail(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
+      }
     }
   }
 
   if (!isAuthenticated && !argv.headful) {
-    spinner.warn('User is not authenticated, spawning headful instance');
+    logger.warn('User is not authenticated, spawning headful instance');
 
     const args = [__filename, '--headful', ...process.argv.slice(2)];
     const ui = childProcess.spawn(process.execPath, args, { stdio: 'inherit' });

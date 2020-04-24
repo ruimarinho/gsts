@@ -3,45 +3,58 @@
  * Module dependencies.
  */
 
-const Console = require('console').Console;
+const ora = require('ora');
 const util = require('util')
 
 /**
- * Logger with support for TTY detection and log levels.
+ * Logger with support for TTY detection.
  */
 
-class Logger extends Console {
-    constructor(stdout, stderr, level, ...args) {
-      super(stdout, stderr, level, ...args);
-
-      this.isTTY = stdout.isTTY;
-      this.level = level;
+class Logger {
+    constructor(verbose, isTTY) {
+      this.isTTY = isTTY;
+      this.verbose = verbose;
+      this.ora = ora({ isEnabled: this.isTTY });
     }
 
-    log(...args) {
-      if (this.isTTY) {
-        super.log(util.format(...args));
+    format(...args) {
+      if (!this.isTTY) {
+        args.unshift(new Date().toISOString())
+      }
 
+      return util.format(...args);
+    }
+
+    start(...args) {
+      if (!this.isTTY) {
         return;
       }
 
-      super.log((new Date().toISOString()), util.format(...args));
+      return this.ora.start(...args);
     }
 
     debug(...args) {
-      if (this.level < 1) {
+      if (!this.verbose) {
         return;
       }
 
-      this.log(...args);
+      return this.ora.info(this.format(...args));
     }
 
     info(...args) {
-      this.log(...args);
+      return this.ora.info(this.format(...args));
+    }
+
+    warn(...args) {
+      return this.ora.warn(this.format(...args));
     }
 
     error(...args) {
-      this.log(...args);
+      return this.ora.fail(this.format(...args));
+    }
+
+    succeed(...args) {
+      return this.ora.succeed(this.format(...args));
     }
 }
 
