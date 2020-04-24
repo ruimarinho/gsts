@@ -276,6 +276,12 @@ const credentialsManager = new CredentialsManager(logger);
   });
 
   page.on('requestfailed', async request => {
+    // The request to the AWS console is aborted on successful login for performance reasons,
+    // so in this particular case it's actually an expected outcome.
+    if (request.url().startsWith('https://console.aws.amazon.com/console/home?state')) {
+      return;
+    }
+
     logger.debug(`Request to "${request.url()}" has been aborted`);
     await browser.close();
   });
@@ -283,7 +289,13 @@ const credentialsManager = new CredentialsManager(logger);
   try {
     await page.goto(`https://accounts.google.com/o/saml2/initsso?idpid=${argv.googleIdpId}&spid=${argv.googleSpId}&forceauthn=false`)
   } catch (e) {
-    logger.debug('An error ocurred while browsing to initsso page', e);
+    // The request to the AWS console is aborted on successful login for performance reasons,
+    // so in this particular case closing the browser instance is actually an expected outcome.
+    if (/browser has disconnected/.test(e.message)) {
+      return;
+    }
+
+    logger.debug('An error ocurred while browsing to the initsso page', e);
     return;
   }
 
