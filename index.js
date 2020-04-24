@@ -113,6 +113,16 @@ const SAML_URL = `https://accounts.google.com/o/saml2/initsso?idpid=${argv.googl
 const logger = new Logger(argv.verbose, process.stderr.isTTY);
 
 /**
+ * Always return control to the terminal in case an unhandled rejection occurs.
+ */
+
+process.on('unhandledRejection', e => {
+	logger.stop();
+	console.error(e);
+	process.exit(1);
+});
+
+/**
  * Create instance of Daemonizer with logger.
  */
 

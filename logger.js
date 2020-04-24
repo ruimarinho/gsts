@@ -33,6 +33,10 @@ class Logger {
       return this.ora.start(...args);
     }
 
+    stop(...args) {
+      return this.ora.stop(...args);
+    }
+
     debug(...args) {
       if (!this.verbose) {
         return;
