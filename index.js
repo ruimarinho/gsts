@@ -234,7 +234,7 @@ const credentialsManager = new CredentialsManager(logger);
 
             if (!response.hasOwnProperty('arn')) {
               request.abort();
-              logger.fail('You must choose one of the available role ARNs to authenticate or, alternatively, set one directly using the --aws-role-arn option');
+              logger.error('You must choose one of the available role ARNs to authenticate or, alternatively, set one directly using the --aws-role-arn option');
               return;
             }
 
@@ -258,18 +258,18 @@ const credentialsManager = new CredentialsManager(logger);
 
         if (e instanceof errors.RoleNotFoundError) {
           request.abort();
-          logger.fail(`Role ARN "${argv.awsRoleArn}" not found in the list of available roles ${JSON.stringify(e.roles)}`);
+          logger.error(`Role ARN "${argv.awsRoleArn}" not found in the list of available roles ${JSON.stringify(e.roles)}`);
           return;
         }
 
         if (['ValidationError', 'InvalidIdentityToken'].includes(e.code)) {
           request.abort();
-          logger.fail(`A remote error ocurred while assuming role: ${e.message}`);
+          logger.error(`A remote error ocurred while assuming role: ${e.message}`);
           return;
         }
 
         request.abort();
-        logger.fail(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
+        logger.error(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
         return;
       }
 
@@ -331,7 +331,7 @@ const credentialsManager = new CredentialsManager(logger);
       if (argv.verbose) {
         logger.debug('An unknown error has ocurred while authenticating in headful mode', e);
       } else {
-        logger.fail(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
+        logger.error(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
       }
     }
   }
