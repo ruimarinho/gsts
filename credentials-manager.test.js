@@ -11,6 +11,7 @@ const Role = require('./role');
 const errors = require('./errors');
 const fixtures = require('./fixtures');
 const fs = require('fs').promises;
+const ini = require('ini');
 const os = require('os');
 const path = require('path');
 
@@ -224,16 +225,181 @@ describe('assumeRoleWithSAML', () => {
     }]);
   });
 
+  describe('getSessionExpirationFromCredentials', () => {
+    it('should return false if credentials are not found', async () => {
+      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsProfile = 'test';
+      const awsRoleArn = 'arn:aws:iam::123456789:role/Foobar';
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const credentialsManager = new CredentialsManager(logger);
+      const { isValid, expiresAt } = await credentialsManager.getSessionExpirationFromCredentials(awsSharedCredentialsFile, awsProfile, awsRoleArn);
+
+      expect(isValid).toBe(false);
+      expect(expiresAt).toBe(null);
+    });
+
+    it('should return false if credentials are for a different role ARN', async () => {
+      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsProfile = 'test';
+      const awsRoleArn = 'arn:aws:iam::987654321:role/Foobar';
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const credentialsManager = new CredentialsManager(logger);
+
+      await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
+        accessKeyId: 'AAAAAABBBBBBCCCCCCDDDDDD',
+        roleArn: 'arn:aws:iam::123456789:role/Foobiz',
+        secretAccessKey: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
+        sessionExpiration: new Date('2020-04-19T10:32:19.000Z'),
+        sessionToken: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB'
+      });
+
+      const { isValid, expiresAt } = await credentialsManager.getSessionExpirationFromCredentials(awsSharedCredentialsFile, awsProfile, awsRoleArn);
+
+      expect(isValid).toBe(false);
+      expect(expiresAt).toBe(null);
+    });
+
+    it('should return false if credentials session expiration is not found', async () => {
+      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsProfile = 'test';
+      const awsRoleArn = 'arn:aws:iam::987654321:role/Foobar';
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const credentialsManager = new CredentialsManager(logger);
+
+      await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
+        accessKeyId: 'AAAAAABBBBBBCCCCCCDDDDDD',
+        roleArn: awsRoleArn,
+        secretAccessKey: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
+        sessionExpiration: new Date('2020-04-19T10:32:19.000Z'),
+        sessionToken: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB'
+      });
+
+      const savedCredentials = await fs.readFile(awsSharedCredentialsFile, 'utf-8');
+      const parsedCredentials = ini.parse(savedCredentials);
+      delete parsedCredentials[awsProfile].aws_session_expiration;
+
+      await fs.writeFile(awsSharedCredentialsFile, ini.encode(parsedCredentials))
+
+      const { isValid, expiresAt } = await credentialsManager.getSessionExpirationFromCredentials(awsSharedCredentialsFile, awsProfile, awsRoleArn);
+
+      expect(isValid).toBe(false);
+      expect(expiresAt).toBe(null);
+    });
+
+    it('should return false if credentials session expiration has passed', async () => {
+      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsProfile = 'test';
+      const awsRoleArn = 'arn:aws:iam::987654321:role/Foobar';
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsExpiresAt = new Date();
+      const credentialsManager = new CredentialsManager(logger);
+
+      await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
+        accessKeyId: 'AAAAAABBBBBBCCCCCCDDDDDD',
+        roleArn: awsRoleArn,
+        secretAccessKey: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
+        sessionExpiration: awsExpiresAt,
+        sessionToken: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB'
+      });
+
+      const { isValid, expiresAt } = await credentialsManager.getSessionExpirationFromCredentials(awsSharedCredentialsFile, awsProfile, awsRoleArn);
+
+      expect(isValid).toBe(false);
+      expect(expiresAt).toBe(awsExpiresAt.toISOString());
+    });
+
+    it('should return false if credentials session expiration is inside valid window', async () => {
+      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsProfile = 'test';
+      const awsRoleArn = 'arn:aws:iam::987654321:role/Foobar';
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const credentialsManager = new CredentialsManager(logger);
+
+      await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
+        accessKeyId: 'AAAAAABBBBBBCCCCCCDDDDDD',
+        roleArn: awsRoleArn,
+        secretAccessKey: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
+        sessionExpiration: new Date(Date.now() + credentialsManager.sessionExpirationDelta + 10000),
+        sessionToken: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB'
+      });
+
+      const { isValid, expiresAt } = await credentialsManager.getSessionExpirationFromCredentials(awsSharedCredentialsFile, awsProfile, awsRoleArn);
+
+      expect(isValid).toBe(true);
+      expect(expiresAt).not.toBe(null);
+    });
+  });
+
+  describe('loadCredentials', () => {
+    it('should not throw an error if credentials file does not exist', async () => {
+      const awsDirectory = path.join(os.tmpdir(), Math.random().toString(36).substring(4));
+      const awsProfile = 'test';
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const credentialsManager = new CredentialsManager(logger);
+      const credentials = await credentialsManager.loadCredentials(awsSharedCredentialsFile, awsProfile);
+
+      expect(credentials).toBe(undefined);
+    });
+
+    it('should not throw an error if credentials profile does not exist', async () => {
+      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsProfile = 'test';
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const credentialsManager = new CredentialsManager(logger);
+
+      await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
+        accessKeyId: 'AAAAAABBBBBBCCCCCCDDDDDD',
+        roleArn: 'arn:aws:iam::987654321:role/Foobar',
+        secretAccessKey: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
+        sessionExpiration: new Date(),
+        sessionToken: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB'
+      });
+
+      const credentials = await credentialsManager.loadCredentials(awsSharedCredentialsFile, 'foobar');
+
+      expect(credentials).toBe(undefined);
+    });
+
+    it('should return the full config if credentials profile is not set', async () => {
+      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsProfile = 'test';
+      const awsExpiresAt = new Date();
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const credentialsManager = new CredentialsManager(logger);
+
+      await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
+        accessKeyId: 'AAAAAABBBBBBCCCCCCDDDDDD',
+        roleArn: 'arn:aws:iam::987654321:role/Foobar',
+        secretAccessKey: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
+        sessionExpiration: awsExpiresAt,
+        sessionToken: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB'
+      });
+
+      const credentials = await credentialsManager.loadCredentials(awsSharedCredentialsFile);
+
+      expect(credentials).toStrictEqual({
+        test: {
+          aws_access_key_id: 'AAAAAABBBBBBCCCCCCDDDDDD',
+          aws_role_arn: 'arn:aws:iam::987654321:role/Foobar',
+          aws_secret_access_key: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
+          aws_session_expiration: awsExpiresAt.toISOString(),
+          aws_session_token: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB'
+        }
+      });
+    });
+  });
+
   describe('saveCredentials', () => {
     it('creates directory if it does not exist', async () => {
+      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsProfile = 'test';
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
       const accessKeyId = 'AAAAAABBBBBBCCCCCCDDDDDD';
       const roleArn = 'arn:aws:iam::987654321:role/Foobar';
       const secretAccessKey = '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4';
       const sessionToken = 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB';
       const sessionExpiration = new Date('2020-04-19T10:32:19.000Z');
       const credentialsManager = new CredentialsManager(logger);
-      const awsProfile = 'test';
-      const awsSharedCredentialsFile = path.join(os.tmpdir(), Math.random().toString(36).substring(4), 'credentials');
 
       await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, { accessKeyId, roleArn, secretAccessKey, sessionExpiration, sessionToken });
 

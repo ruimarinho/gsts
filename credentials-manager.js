@@ -189,12 +189,12 @@ class CredentialsManager {
     if (new Date(credentials.aws_session_expiration).getTime() - this.sessionExpirationDelta > Date.now()) {
       this.logger.debug('Session is expected to be valid until %s minus expiration delta of %d seconds', credentials.aws_session_expiration, this.sessionExpirationDelta / 1e3);
 
-      return { isValid: true, expiresAt: new Date(credentials.aws_session_expiration).getTime() - this.sessionExpirationDelta };
+      return { isValid: true, expiresAt: new Date(new Date(credentials.aws_session_expiration).getTime() - this.sessionExpirationDelta).toISOString() };
     }
 
     this.logger.debug('Session has expired on %s', credentials.aws_session_expiration);
 
-    return { isValid: false, expiresAt: new Date(credentials.aws_session_expiration).getTime() - this.sessionExpirationDelta };
+    return { isValid: false, expiresAt: new Date(credentials.aws_session_expiration).toISOString() };
   }
 }
 
