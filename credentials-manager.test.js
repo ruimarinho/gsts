@@ -103,7 +103,7 @@ describe('assumeRoleWithSAML', () => {
       RoleArn: 'arn:aws:iam::123456789:role/Foobar',
       SAMLAssertion: 'foobar'
     }]);
-    expect(savedCredentials).toBe(`[${awsProfile}]\naws_access_key_id=${accessKeyId}\naws_secret_access_key=${secretAccessKey}\naws_session_expiration=${sessionExpiration.toISOString()}\naws_session_token=${sessionToken}\n`);
+    expect(savedCredentials).toBe(`[${awsProfile}]\naws_access_key_id=${accessKeyId}\naws_role_arn=${role.roleArn}\naws_secret_access_key=${secretAccessKey}\naws_session_expiration=${sessionExpiration.toISOString()}\naws_session_token=${sessionToken}\n`);
   });
 
   it('parses IAM role max session duration if custom session duration is defined', async () => {
@@ -227,6 +227,7 @@ describe('assumeRoleWithSAML', () => {
   describe('saveCredentials', () => {
     it('creates directory if it does not exist', async () => {
       const accessKeyId = 'AAAAAABBBBBBCCCCCCDDDDDD';
+      const roleArn = 'arn:aws:iam::987654321:role/Foobar';
       const secretAccessKey = '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4';
       const sessionToken = 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB';
       const sessionExpiration = new Date('2020-04-19T10:32:19.000Z');
@@ -234,7 +235,7 @@ describe('assumeRoleWithSAML', () => {
       const awsProfile = 'test';
       const awsSharedCredentialsFile = path.join(os.tmpdir(), Math.random().toString(36).substring(4), 'credentials');
 
-      await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, { accessKeyId, secretAccessKey, sessionExpiration, sessionToken });
+      await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, { accessKeyId, roleArn, secretAccessKey, sessionExpiration, sessionToken });
 
       await fs.stat(awsSharedCredentialsFile);
     });

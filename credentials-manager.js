@@ -98,6 +98,7 @@ class CredentialsManager {
 
     await this.saveCredentials(awsSharedCredentialsFile, awsProfile, {
       accessKeyId: stsResponse.Credentials.AccessKeyId,
+      roleArn: role.roleArn,
       secretAccessKey: stsResponse.Credentials.SecretAccessKey,
       sessionExpiration: stsResponse.Credentials.Expiration,
       sessionToken: stsResponse.Credentials.SessionToken
@@ -137,7 +138,7 @@ class CredentialsManager {
    * Save AWS credentials to a profile section.
    */
 
-  async saveCredentials(path, profile, { accessKeyId, secretAccessKey, sessionExpiration, sessionToken }) {
+  async saveCredentials(path, profile, { accessKeyId, roleArn, secretAccessKey, sessionExpiration, sessionToken }) {
     // The config file may have other profiles configured, so parse existing data instead of writing a new file instead.
     let credentials = await this.loadCredentials(path);
 
@@ -147,6 +148,7 @@ class CredentialsManager {
 
     credentials[profile] = {};
     credentials[profile].aws_access_key_id = accessKeyId;
+    credentials[profile].aws_role_arn = roleArn;
     credentials[profile].aws_secret_access_key = secretAccessKey;
     credentials[profile].aws_session_expiration = sessionExpiration.toISOString();
     credentials[profile].aws_session_token = sessionToken;
@@ -163,12 +165,18 @@ class CredentialsManager {
    * failing at the exact time of expiration.
    */
 
-  async getSessionExpirationFromCredentials(path, profile) {
+  async getSessionExpirationFromCredentials(path, profile, roleArn) {
     this.logger.debug('Attempting to retrieve session expiration credentials');
 
     const credentials = await this.loadCredentials(path, profile);
 
     if (!credentials) {
+      return { isValid: false, expiresAt: null };
+    }
+
+    if (credentials.aws_role_arn !== roleArn)  {
+      this.logger.warn('Found credentials for a different role ARN');
+
       return { isValid: false, expiresAt: null };
     }
 

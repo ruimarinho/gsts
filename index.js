@@ -172,7 +172,7 @@ const credentialsManager = new CredentialsManager(logger);
   let isAuthenticated = false;
 
   if (!argv.headful) {
-    let session = await credentialsManager.getSessionExpirationFromCredentials(argv.awsSharedCredentialsFile, argv.awsProfile);
+    let session = await credentialsManager.getSessionExpirationFromCredentials(argv.awsSharedCredentialsFile, argv.awsProfile, argv.awsRoleArn);
 
     if (!argv.force && session.isValid) {
       isAuthenticated = true;
