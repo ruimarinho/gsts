@@ -313,12 +313,10 @@ const credentialsManager = new CredentialsManager(logger);
     try {
       await page.waitFor('input[type=email]');
 
-      const selector = await page.$('input[type=email]');
-
       if (argv.username) {
         logger.debug(`Pre-filling email with ${argv.username}`);
 
-        await selector.type(argv.username);
+        await page.evaluate((data) => document.querySelector('input[type=email]').value = data.username, { username: argv.username })
       }
 
       await page.waitForResponse('https://signin.aws.amazon.com/saml');
