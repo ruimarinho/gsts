@@ -7,7 +7,6 @@
 const CredentialsManager = require('./credentials-manager');
 const Daemonizer = require('./daemonizer');
 const Logger = require('./logger')
-const Stealth = require('puppeteer-extra-plugin-stealth');
 const childProcess = require('child_process');
 const errors = require('./errors');
 const homedir = require('os').homedir();
@@ -15,9 +14,10 @@ const open = require('open');
 const ora = require('ora');
 const path = require('path');
 const paths = require('env-paths')('gsts', { suffix: '' });
-const puppeteer = require('puppeteer-extra');
 const prompts = require('prompts');
+const puppeteer = require('puppeteer-extra');
 const trash = require('trash');
+const hidingTricks = require('./hiding-tricks')
 
 // Define all available cli options.
 const cliOptions = {
@@ -187,23 +187,32 @@ const credentialsManager = new CredentialsManager(logger);
     }
   }
 
-  const stealth = Stealth();
   const options = {
     headless: !argv.headful,
     userDataDir: paths.data,
   };
 
+  const stealthOptions = DEFAULT_STEALTH_OPTIONS;
+
   if (argv.headful && argv.enableExperimentalU2FSupport) {
-    stealth.enabledEvasions.delete('chrome.runtime');
     options.ignoreDefaultArgs = ['--disable-component-extensions-with-background-pages'];
+    stealthOptions.mockChrome = false;
 
     logger.debug('Enabled experimental U2F support');
   }
 
-  puppeteer.use(stealth)
-
   const browser = await puppeteer.launch(options);
+  const defaultContext = browser.defaultBrowserContext();
+  const contextPrototype = Object.getPrototypeOf(defaultContext);
+  const prevNewPage = contextPrototype.newPage;
+  contextPrototype.newPage = async function (...args) {
+      const page = await prevNewPage.bind(this)(...args);
+      await applyStealthTricks(page, stealthOptions);
+      return page;
+  };
+
   const page = await browser.newPage();
+
   await page.setRequestInterception(true);
   await page.setDefaultTimeout(0);
 
@@ -345,3 +354,39 @@ const credentialsManager = new CredentialsManager(logger);
 
   await browser.close();
 })();
+
+
+
+const DEFAULT_STEALTH_OPTIONS = {
+    addPlugins: true,
+    emulateWindowFrame: true,
+    emulateWebGL: true,
+    emulateConsoleDebug: true,
+    addLanguage: true,
+    hideWebDriver: true,
+    hackPermissions: true,
+    mockChrome: true,
+    mockChromeInIframe: true,
+    mockDeviceMemory: true,
+};
+
+/**
+ * Applies stealth tricks to the puppeteer page.
+ */
+
+function applyStealthTricks(page, options) {
+    const functions = Object.keys(options)
+        .filter((key) => {
+            return options[key];
+        })
+        .map(key => hidingTricks[key].toString());
+
+    /* istanbul ignore next */
+    const addFunctions = (functionsArr) => {
+        for (const func of functionsArr) {
+            eval(func)(); // eslint-disable-line
+        }
+    };
+
+    return page.evaluateOnNewDocument(addFunctions, functions);
+}

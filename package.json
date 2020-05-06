@@ -16,7 +16,8 @@
     "index.js",
     "logger.js",
     "parser.js",
-    "role.js"
+    "role.js",
+    "hiding-tricks.js"
   ],
   "keywords": [
     "google",
