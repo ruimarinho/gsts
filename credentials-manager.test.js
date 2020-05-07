@@ -328,6 +328,28 @@ describe('assumeRoleWithSAML', () => {
       expect(isValid).toBe(true);
       expect(expiresAt).not.toBe(null);
     });
+
+    it('should return true if credentials are found for unspecified custom role ARN', async () => {
+      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsProfile = 'test';
+      const awsRoleArn = 'arn:aws:iam::987654321:role/Foobar';
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const credentialsManager = new CredentialsManager(logger);
+      const sessionExpiresAt = new Date(new Date().getTime() + 100000000);
+
+      await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
+        accessKeyId: 'AAAAAABBBBBBCCCCCCDDDDDD',
+        roleArn: 'arn:aws:iam::123456789:role/Foobiz',
+        secretAccessKey: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
+        sessionExpiration: sessionExpiresAt,
+        sessionToken: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB'
+      });
+
+      const { isValid, expiresAt } = await credentialsManager.getSessionExpirationFromCredentials(awsSharedCredentialsFile, awsProfile);
+
+      expect(isValid).toBe(true);
+      expect(expiresAt).toBe(new Date(sessionExpiresAt.getTime() - credentialsManager.sessionExpirationDelta).toISOString());
+    });
   });
 
   describe('loadCredentials', () => {

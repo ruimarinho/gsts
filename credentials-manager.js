@@ -174,7 +174,7 @@ class CredentialsManager {
       return { isValid: false, expiresAt: null };
     }
 
-    if (credentials.aws_role_arn !== roleArn)  {
+    if (roleArn && credentials.aws_role_arn !== roleArn)  {
       this.logger.warn('Found credentials for a different role ARN');
 
       return { isValid: false, expiresAt: null };
