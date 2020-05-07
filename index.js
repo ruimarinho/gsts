@@ -6,13 +6,14 @@
 
 const CredentialsManager = require('./credentials-manager');
 const Daemonizer = require('./daemonizer');
+const IframePlugin = require('./puppeteer-iframe-plugin');
 const Logger = require('./logger')
 const Stealth = require('puppeteer-extra-plugin-stealth');
+const UserAgentOverride = require('puppeteer-extra-plugin-stealth/evasions/user-agent-override')
 const childProcess = require('child_process');
 const errors = require('./errors');
 const homedir = require('os').homedir();
 const open = require('open');
-const ora = require('ora');
 const path = require('path');
 const paths = require('env-paths')('gsts', { suffix: '' });
 const puppeteer = require('puppeteer-extra');
@@ -200,7 +201,13 @@ const credentialsManager = new CredentialsManager(logger);
     logger.debug('Enabled experimental U2F support');
   }
 
+
+  // Use an appropriate user agent instead that takes the platform into consideration.
+  stealth.enabledEvasions.delete('user-agent-override')
+
   puppeteer.use(stealth)
+  puppeteer.use(IframePlugin())
+  puppeteer.use(UserAgentOverride({ platform: process.platform === 'darwin' ? 'MacIntel' : process.platform === 'linux' ? 'Linux x86_64' : 'Win32' }))
 
   const browser = await puppeteer.launch(options);
   const page = await browser.newPage();

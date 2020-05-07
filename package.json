@@ -16,6 +16,7 @@
     "index.js",
     "logger.js",
     "parser.js",
+    "puppeteer-iframe-plugin.js",
     "role.js"
   ],
   "keywords": [
