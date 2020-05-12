@@ -7,7 +7,7 @@ const { dirname } = require('path');
 const Parser = require('./parser');
 const STS = require('aws-sdk/clients/sts');
 const errors = require('./errors');
-const fs = require('fs').promises;
+const fs = require('fs');
 const ini = require('ini');
 
 // Delta (in seconds) between exact expiration date and current date to avoid requests
@@ -15,7 +15,7 @@ const ini = require('ini');
 const SESSION_EXPIRATION_DELTA = 30e3; // 30 seconds
 
 // Regex pattern for duration seconds validation error.
-const REGEX_PATTERN_DURATION_SECONDS = /value less than or equal to (?<duration>[0-9]+)/
+const REGEX_PATTERN_DURATION_SECONDS = /value less than or equal to ([0-9]+)/
 
 /**
  * Process a SAML response and extract all relevant data to be exchanged for an
@@ -77,10 +77,14 @@ class CredentialsManager {
           throw e;
         }
 
-        let matches = e.message.match(REGEX_PATTERN_DURATION_SECONDS)
+        let matches = e.message.match(REGEX_PATTERN_DURATION_SECONDS);
+        if (!matches) {
+          return;
+        }
 
-        if (matches && matches.groups.duration) {
-          sessionDuration = Number(matches.groups.duration);
+        let duration = matches[1];
+        if (duration) {
+          sessionDuration = Number(duration);
 
           this.logger.warn('Custom session duration %d exceeds maximum session duration of %d allowed for role. Please set --aws-session-duration=%d or $AWS_SESSION_DURATION=%d to surpress this warning', customSessionDuration, sessionDuration, sessionDuration, sessionDuration);
         }
@@ -115,7 +119,7 @@ class CredentialsManager {
     let credentials;
 
     try {
-      credentials = await fs.readFile(path, 'utf-8')
+      credentials = fs.readFileSync(path, 'utf-8')
     } catch (e) {
       if (e.code === 'ENOENT') {
         this.logger.debug('Credentials file does not exist at %s', path)
@@ -153,8 +157,10 @@ class CredentialsManager {
     credentials[profile].aws_session_expiration = sessionExpiration.toISOString();
     credentials[profile].aws_session_token = sessionToken;
 
-    await fs.mkdir(dirname(path), { recursive: true });
-    await fs.writeFile(path, ini.encode(credentials))
+    if (!fs.existsSync(dirname(path))) {
+      fs.mkdirSync(dirname(path));
+    }
+    fs.writeFileSync(path, ini.encode(credentials));
 
     this.logger.debug('The credentials have been stored in "%s" under AWS profile "%s" with contents %o', path, profile, credentials);
   }

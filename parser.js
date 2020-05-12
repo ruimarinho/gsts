@@ -8,10 +8,10 @@ const Role = require('./role');
 const Saml = require('libsaml');
 
 // Regex pattern for Role.
-const REGEX_PATTERN_ROLE = /(?<roleArn>arn:(aws|aws-us-gov|aws-cn):iam:[^:]*:[0-9]+:role\/(?<name>[^,]+))/i;
+const REGEX_PATTERN_ROLE = /(arn:(aws|aws-us-gov|aws-cn):iam:[^:]*:[0-9]+:role\/([^,]+))/i;
 
 // Regex pattern for Principal (SAML Provider).
-const REGEX_PATTERN_PRINCIPAL = /(?<samlProvider>arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+)/i;
+const REGEX_PATTERN_PRINCIPAL = /(arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+)/i;
 
 /**
  * Process a SAML response and extract all relevant data to be exchanged for an
@@ -46,7 +46,11 @@ class Parser {
         continue;
       }
 
-      roles.push(new Role(roleMatches.groups.name, roleMatches.groups.roleArn, principalMatches.groups.samlProvider, idpSessionDuration))
+      let roleArn = roleMatches[1];
+      let roleName = roleMatches[3];
+      let samlProvider = principalMatches[1];
+
+      roles.push(new Role(roleName, roleArn, samlProvider, idpSessionDuration))
     }
 
     this.logger.debug('Parsed Role attribute with value %o', roles);
