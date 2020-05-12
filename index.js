@@ -6,6 +6,7 @@
 
 const CredentialsManager = require('./credentials-manager');
 const Daemonizer = require('./daemonizer');
+const DeviceViewportPlugin = require('./puppeteer-device-viewport-plugin');
 const IframePlugin = require('./puppeteer-iframe-plugin');
 const Logger = require('./logger')
 const Stealth = require('puppeteer-extra-plugin-stealth');
@@ -190,7 +191,8 @@ const credentialsManager = new CredentialsManager(logger);
 
   const device = {
     platform: process.platform === 'darwin' ? 'MacIntel' : process.platform === 'linux' ? 'Linux x86_64' : 'Win32',
-    viewport: { width: 1200, height: 800 }
+    viewport: { width: 1200, height: 800 },
+    deviceScaleFactor: 1
   };
   const stealth = Stealth();
   const options = {
@@ -213,6 +215,7 @@ const credentialsManager = new CredentialsManager(logger);
   stealth.enabledEvasions.delete('user-agent-override')
 
   puppeteer.use(stealth)
+  puppeteer.use(DeviceViewportPlugin(device))
   puppeteer.use(IframePlugin())
   puppeteer.use(UserAgentOverride({ platform: device.platform }))
 
