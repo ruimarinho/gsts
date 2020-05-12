@@ -188,15 +188,22 @@ const credentialsManager = new CredentialsManager(logger);
     }
   }
 
+  const device = {
+    platform: process.platform === 'darwin' ? 'MacIntel' : process.platform === 'linux' ? 'Linux x86_64' : 'Win32',
+    viewport: { width: 1200, height: 800 }
+  };
   const stealth = Stealth();
   const options = {
+    args: ['--disable-features=site-per-process', `--window-size=${device.viewport.width},${device.viewport.height}`],
+    defaultViewport: device.viewport,
     headless: !argv.headful,
-    userDataDir: paths.data,
+    ignoreDefaultArgs: ['--enable-automation'],
+    userDataDir: paths.data
   };
 
   if (argv.headful && argv.enableExperimentalU2FSupport) {
     stealth.enabledEvasions.delete('chrome.runtime');
-    options.ignoreDefaultArgs = ['--disable-component-extensions-with-background-pages'];
+    options.ignoreDefaultArgs.push('--disable-component-extensions-with-background-pages');
 
     logger.debug('Enabled experimental U2F support');
   }
@@ -207,7 +214,7 @@ const credentialsManager = new CredentialsManager(logger);
 
   puppeteer.use(stealth)
   puppeteer.use(IframePlugin())
-  puppeteer.use(UserAgentOverride({ platform: process.platform === 'darwin' ? 'MacIntel' : process.platform === 'linux' ? 'Linux x86_64' : 'Win32' }))
+  puppeteer.use(UserAgentOverride({ platform: device.platform }))
 
   const browser = await puppeteer.launch(options);
   const page = await browser.newPage();
