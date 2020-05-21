@@ -3,12 +3,19 @@
  * Module dependencies.
  */
 
-const { dirname } = require('path');
+const { dirname, join, normalize, sep } = require('path');
 const Parser = require('./parser');
 const STS = require('aws-sdk/clients/sts');
 const errors = require('./errors');
-const fs = require('fs');
+const ffs = require('fs');
 const ini = require('ini');
+const util = require('util');
+const fs = {
+  exists: util.promisify(ffs.exists),
+  mkdir: util.promisify(ffs.mkdir),
+  readFile: util.promisify(ffs.readFile),
+  writeFile: util.promisify(ffs.writeFile),
+}
 
 // Delta (in seconds) between exact expiration date and current date to avoid requests
 // on the same second to fail.
@@ -16,6 +23,20 @@ const SESSION_EXPIRATION_DELTA = 30e3; // 30 seconds
 
 // Regex pattern for duration seconds validation error.
 const REGEX_PATTERN_DURATION_SECONDS = /value less than or equal to ([0-9]+)/
+
+/**
+ * Create directory if it doesn't exist. Create parent directories as needed
+ */
+async function mkdirP(path, mode) {
+  let dirs = normalize(path).split(sep).filter(d => d);
+  for (let i = 0; i < dirs.length; i++) {
+    let dir = join('/', ...dirs.slice(0, i+1));
+    let exists = await fs.exists(dir);
+    if (!exists) {
+      await fs.mkdir(dir, mode);
+    }
+  }
+}
 
 /**
  * Process a SAML response and extract all relevant data to be exchanged for an
@@ -119,7 +140,7 @@ class CredentialsManager {
     let credentials;
 
     try {
-      credentials = fs.readFileSync(path, 'utf-8')
+      credentials = await fs.readFile(path, 'utf-8')
     } catch (e) {
       if (e.code === 'ENOENT') {
         this.logger.debug('Credentials file does not exist at %s', path)
@@ -157,10 +178,8 @@ class CredentialsManager {
     credentials[profile].aws_session_expiration = sessionExpiration.toISOString();
     credentials[profile].aws_session_token = sessionToken;
 
-    if (!fs.existsSync(dirname(path))) {
-      fs.mkdirSync(dirname(path));
-    }
-    fs.writeFileSync(path, ini.encode(credentials));
+    await mkdirP(dirname(path));
+    await fs.writeFile(path, ini.encode(credentials));
 
     this.logger.debug('The credentials have been stored in "%s" under AWS profile "%s" with contents %o', path, profile, credentials);
   }
