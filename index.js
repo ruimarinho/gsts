@@ -60,6 +60,10 @@ const cliOptions = {
     boolean: false,
     description: `Enable experimental U2F support`
   },
+  'json': {
+    boolean: false,
+    description: 'JSON output (compatible with AWS config\'s credential_process)'
+  },
   'force': {
     boolean: false,
     description: 'Force re-authorization even with valid session'
@@ -185,6 +189,10 @@ const credentialsManager = new CredentialsManager(logger);
         logger.info('Login is still valid, no need to re-authorize!');
       }
 
+      if (argv.json) {
+        await credentialsManager.printJSONOutput(argv.awsSharedCredentialsFile, argv.awsProfile);
+      }
+
       return;
     }
   }
@@ -269,6 +277,9 @@ const credentialsManager = new CredentialsManager(logger);
           logger.debug(`Login successful${ argv.verbose ? ` and credentials stored in "${argv.awsSharedCredentialsFile}" under AWS profile "${argv.awsProfile}" with role ARN "${role.roleArn}"` : '!' }`);
         } else {
           logger.succeed('Login successful!');
+        }
+        if (argv.json) {
+          await credentialsManager.printJSONOutput(argv.awsSharedCredentialsFile, argv.awsProfile);
         }
       } catch (e) {
         logger.debug('An error has ocurred while authenticating', e);
