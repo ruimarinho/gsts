@@ -428,4 +428,43 @@ describe('assumeRoleWithSAML', () => {
       await fs.stat(awsSharedCredentialsFile);
     });
   });
+
+  describe('exportCredentialsAsJSON', () => {
+    it.only('should return a basic json structure when credentials are missing', async () => {
+      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const credentialsManager = new CredentialsManager(logger);
+      const credentials = await credentialsManager.exportCredentialsAsJSON(awsSharedCredentialsFile);
+
+      expect(credentials).toStrictEqual(JSON.stringify({
+        Version: 1
+      }));
+    });
+
+    it('should return credentials in json format', async () => {
+      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsProfile = 'test';
+      const awsExpiresAt = new Date();
+      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const credentialsManager = new CredentialsManager(logger);
+
+      await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
+        accessKeyId: 'AAAAAABBBBBBCCCCCCDDDDDD',
+        roleArn: 'arn:aws:iam::987654321:role/Foobar',
+        secretAccessKey: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
+        sessionExpiration: awsExpiresAt,
+        sessionToken: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB'
+      });
+
+      const credentials = await credentialsManager.exportAsJSON(awsSharedCredentialsFile, awsProfile);
+
+      expect(credentials).toStrictEqual(JSON.stringify({
+        Version: 1,
+        AccessKeyId: 'AAAAAABBBBBBCCCCCCDDDDDD',
+        SecretAccessKey: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
+        SessionToken: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB',
+        Expiration: awsExpiresAt.toISOString()
+      }));
+    });
+  });
 });

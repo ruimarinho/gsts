@@ -60,6 +60,10 @@ const cliOptions = {
     boolean: false,
     description: `Enable experimental U2F support`
   },
+  'json': {
+    boolean: false,
+    description: `JSON output (compatible with AWS config's credential_process)`
+  },
   'force': {
     boolean: false,
     description: 'Force re-authorization even with valid session'
@@ -147,6 +151,18 @@ const daemonizer = new Daemonizer(logger, configArgs);
 const credentialsManager = new CredentialsManager(logger);
 
 /**
+ * Format output according to the request format.
+ */
+
+async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null) {
+  if (format !== 'json') {
+    return;
+  }
+
+  console.log(await credentialsManager.exportAsJSON(awsSharedCredentialsFile, awsProfile));
+}
+
+/**
  * Main execution routine which handles command-line flags.
  */
 
@@ -184,6 +200,8 @@ const credentialsManager = new CredentialsManager(logger);
       } else {
         logger.info('Login is still valid, no need to re-authorize!');
       }
+
+      formatOutput(argv.awsSharedCredentialsFile, argv.awsProfile, argv.json ? 'json' : null);
 
       return;
     }
@@ -270,6 +288,8 @@ const credentialsManager = new CredentialsManager(logger);
         } else {
           logger.succeed('Login successful!');
         }
+
+        formatOutput(argv.awsSharedCredentialsFile, argv.awsProfile, argv.json ? 'json' : null);
       } catch (e) {
         logger.debug('An error has ocurred while authenticating', e);
 

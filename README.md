@@ -67,6 +67,17 @@ Additionally, this extensions uses [chrome.runtime](https://github.com/google/u2
 
 In conclusion, the only alternative to successfully enable legacy U2F support on puppeteer is to skip this evasion technique and enable component extensions. For the time being and due to the potential increase in detection, U2F support remains behind a feature flag.
 
+### `credential_process`
+
+`gsts` can be invoked as a credential source through [`credential_process`](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html) with the `--json` option.
+
+For example, add this to your `~/.aws/config` file:
+
+```
+[profile sts]
+credential_process = gsts --aws-role-arn arn:aws:iam::123456789:role/foobar --sp-id 12345 --idp-id A12bc34d5 --json
+```
+
 ## Amazon ECR
 
 If you'd like to automatically authenticate your Docker installation before pulling private images from Amazon ECR, you can use the fantastic [ECR Docker Credential Helper](https://github.com/awslabs/amazon-ecr-credential-helper) in combination with `gsts`.

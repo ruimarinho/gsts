@@ -186,6 +186,31 @@ class CredentialsManager {
   }
 
   /**
+   * Export credentials as JSON output for use with AWS's `credential_process`.
+   * See https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html
+   */
+
+  async exportAsJSON(path, profile) {
+    this.logger.debug('Outputting data as JSON');
+
+    let credentials = await this.loadCredentials(path, profile);
+
+    if (!credentials) {
+      // Return a minimally-valid JSON so that the AWS SDK can return a proper error
+      // message instead of a failure parsing the output of this tool.
+      return JSON.stringify({ Version: 1 });
+    }
+
+    return JSON.stringify({
+      Version: 1,
+      AccessKeyId: credentials.aws_access_key_id,
+      SecretAccessKey: credentials.aws_secret_access_key,
+      SessionToken: credentials.aws_session_token,
+      Expiration: credentials.aws_session_expiration
+    });
+  }
+
+  /**
    * Extract session expiration from AWS credentials file for a given profile.
    * The property `sessionExpirationDelta` represents a safety buffer to avoid requests
    * failing at the exact time of expiration.
