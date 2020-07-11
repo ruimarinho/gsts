@@ -17,6 +17,7 @@
     "logger.js",
     "parser.js",
     "puppeteer-iframe-plugin.js",
+    "puppeteer-device-viewport-plugin.js",
     "role.js"
   ],
   "keywords": [
