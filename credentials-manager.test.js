@@ -429,12 +429,12 @@ describe('assumeRoleWithSAML', () => {
     });
   });
 
-  describe('exportCredentialsAsJSON', () => {
-    it.only('should return a basic json structure when credentials are missing', async () => {
+  describe('exportAsJSON', () => {
+    it('should return a basic json structure when credentials are missing', async () => {
       const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
       const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
       const credentialsManager = new CredentialsManager(logger);
-      const credentials = await credentialsManager.exportCredentialsAsJSON(awsSharedCredentialsFile);
+      const credentials = await credentialsManager.exportAsJSON(awsSharedCredentialsFile);
 
       expect(credentials).toStrictEqual(JSON.stringify({
         Version: 1
