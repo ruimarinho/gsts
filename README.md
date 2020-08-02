@@ -213,6 +213,14 @@ Sometimes puppeteer can get confused with the session state Chromium's data dire
 
 [ohmyzsh's git plugin](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/git) includes an alias named `gsts` as a shorthand for `git stash show --text`. You can either disable the `git` plugin entirely or, alternatively, add `unalias gsts` at the end of your dotfiles if you don't use this git command often.
 
+**"Error when retrieving credentials from custom-process: Error: Failed to launch the browser process!" when using the aws-cli with credential_process**
+
+Although seamingly unrelated to `gsts`, try unsetting `LD_LIBRARY_PATH` before calling it, like so:
+
+```bash
+credential_process = bash -c "unset LD_LIBRARY_PATH; gsts --aws-role-arn arn:aws:iam::123456789:role/foobar --sp-id 12345 --idp-id A12bc34d5 --username foo@bar.com --json"
+```
+
 ## License
 
 MIT
