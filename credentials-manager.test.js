@@ -104,7 +104,7 @@ describe('assumeRoleWithSAML', () => {
       RoleArn: 'arn:aws:iam::123456789:role/Foobar',
       SAMLAssertion: 'foobar'
     }]);
-    expect(savedCredentials).toBe(`[${awsProfile}]\naws_access_key_id=${accessKeyId}\naws_role_arn=${role.roleArn}\naws_secret_access_key=${secretAccessKey}\naws_session_expiration=${sessionExpiration.toISOString()}\naws_session_token=${sessionToken}\n`);
+    expect(savedCredentials).toBe(`[${awsProfile}]${os.EOL}aws_access_key_id=${accessKeyId}${os.EOL}aws_role_arn=${role.roleArn}${os.EOL}aws_secret_access_key=${secretAccessKey}${os.EOL}aws_session_expiration=${sessionExpiration.toISOString()}${os.EOL}aws_session_token=${sessionToken}${os.EOL}`);
   });
 
   it('parses IAM role max session duration if custom session duration is defined', async () => {
