@@ -79,6 +79,11 @@ const cliOptions = {
     description: 'Google Identity Provider ID (IDP ID)',
     required: true
   },
+  'puppeteer-executable-path': {
+    description: 'Set custom executable path for puppeteer',
+    default: null,
+    required: false
+  },
   'sp-id': {
     alias: 'google-sp-id',
     description: 'Google Service Provider ID (SP ID)',
@@ -216,6 +221,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
   const options = {
     args: ['--disable-features=site-per-process', `--window-size=${device.viewport.width},${device.viewport.height}`],
     defaultViewport: device.viewport,
+    executablePath: argv.puppeteerExecutablePath,
     headless: !argv.headful,
     ignoreDefaultArgs: ['--enable-automation'],
     userDataDir: paths.data
