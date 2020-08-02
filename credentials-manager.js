@@ -25,16 +25,49 @@ const SESSION_EXPIRATION_DELTA = 30e3; // 30 seconds
 const REGEX_PATTERN_DURATION_SECONDS = /value less than or equal to ([0-9]+)/
 
 /**
- * Recursively create a directory.
+ * Recursively create a directory based on the implementation
+ * from https://github.com/jprichardson/node-fs-extra.
  */
 
 async function mkdirP(path, mode) {
-  let dirs = normalize(path).split(sep).filter(d => d);
-  for (let i = 0; i < dirs.length; i++) {
-    let dir = join('/', ...dirs.slice(0, i+1));
-    let exists = await fs.exists(dir);
-    if (!exists) {
-      await fs.mkdir(dir, mode);
+  try {
+    await fs.mkdir(path, mode);
+  } catch (error) {
+    if (error.code === 'EPERM') {
+      throw error;
+    }
+
+    if (error.code === 'ENOENT') {
+      if (path.dirname(path) === path) {
+        // This replicates the exception of `fs.mkdir` with the native
+        // `recusive` option when ran on an invalid drive under Windows.
+        // From https://github.com/jprichardson/node-fs-extra.
+        const error = new Error(`operation not permitted, mkdir '${path}'`);
+        error.code = 'EPERM';
+        error.errno = -4048;
+        error.path = path;
+        error.syscall = 'mkdir';
+        throw error;
+      }
+
+      if (error.message.includes('null bytes')) {
+        throw error;
+      }
+
+      await mkdirP(path.dirname(path));
+    }
+
+    try {
+      const stats = await fs.stat(path);
+      if (!stats.isDirectory()) {
+        // This error is never exposed to the user
+        // it is caught below, and the original error is thrown
+        throw new Error('The path is not a directory');
+      }
+    } catch {
+      if (error.code !== 'EEXIST') {
+        throw error;
+      }
     }
   }
 }
