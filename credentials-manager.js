@@ -3,7 +3,7 @@
  * Module dependencies.
  */
 
-const { dirname, join, normalize, sep } = require('path');
+const { dirname } = require('path');
 const Parser = require('./parser');
 const STS = require('aws-sdk/clients/sts');
 const errors = require('./errors');
