@@ -14,6 +14,7 @@ const fs = {
   exists: util.promisify(ffs.exists),
   mkdir: util.promisify(ffs.mkdir),
   readFile: util.promisify(ffs.readFile),
+  stat: util.promisify(ffs.stat),
   writeFile: util.promisify(ffs.writeFile),
 }
 
@@ -32,12 +33,12 @@ const REGEX_PATTERN_DURATION_SECONDS = /value less than or equal to ([0-9]+)/
 async function mkdirP(path, mode) {
   try {
     await fs.mkdir(path, mode);
-  } catch (error) {
-    if (error.code === 'EPERM') {
-      throw error;
+  } catch (e) {
+    if (e.code === 'EPERM') {
+      throw e;
     }
 
-    if (error.code === 'ENOENT') {
+    if (e.code === 'ENOENT') {
       if (path.dirname(path) === path) {
         // This replicates the exception of `fs.mkdir` with the native
         // `recusive` option when ran on an invalid drive under Windows.
@@ -50,8 +51,8 @@ async function mkdirP(path, mode) {
         throw error;
       }
 
-      if (error.message.includes('null bytes')) {
-        throw error;
+      if (e.message.includes('null bytes')) {
+        throw e;
       }
 
       await mkdirP(path.dirname(path));
@@ -64,9 +65,9 @@ async function mkdirP(path, mode) {
         // it is caught below, and the original error is thrown
         throw new Error('The path is not a directory');
       }
-    } catch {
-      if (error.code !== 'EEXIST') {
-        throw error;
+    } catch (e) {
+      if (e.code !== 'EEXIST') {
+        throw e;
       }
     }
   }
