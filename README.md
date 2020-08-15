@@ -153,6 +153,9 @@ Options:
   --aws-profile                      AWS profile name for storing credentials
                                                                 [default: "sts"]
   --aws-role-arn                     AWS role ARN to authenticate with
+  --aws-session-duration             AWS session duration in seconds (defaults
+                                     to the value provided by the IDP, if set)
+                                                                        [number]
   --aws-shared-credentials-file      AWS shared credentials file
                                  [default: "~/.aws/credentials"]
   --clean                            Start authorization from a clean session
@@ -166,10 +169,14 @@ Options:
                                      daemon
                                  [default: "/usr/local/var/log/gsts.stderr.log"]
   --enable-experimental-u2f-support  Enable experimental U2F support
+  --json                             JSON output (compatible with AWS config's
+                                     credential_process)
   --force                            Force re-authorization even with valid
                                      session
   --idp-id, --google-idp-id          Google Identity Provider ID (IDP ID)
                                                                       [required]
+  --puppeteer-executable-path        Set custom executable path for puppeteer
+                                                                 [default: null]
   --sp-id, --google-sp-id            Google Service Provider ID (SP ID)
                                                                       [required]
   --username, --google-username      Google username to auto pre-fill during
