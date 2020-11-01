@@ -19,6 +19,15 @@ The problem is that this flow is tailored for the web which makes command-line u
 
 ## Installation
 
+### macOS
+
+```shell
+brew tap ruimarinho/tap
+brew install gsts
+```
+
+### Other Platforms
+
 Install the package via `npm`:
 
 ```sh
