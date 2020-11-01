@@ -228,6 +228,17 @@ Although seamingly unrelated to `gsts`, try unsetting `LD_LIBRARY_PATH` before c
 credential_process = bash -c "unset LD_LIBRARY_PATH; gsts --aws-role-arn arn:aws:iam::123456789:role/foobar --sp-id 12345 --idp-id A12bc34d5 --username foo@bar.com --json"
 ```
 
+**Error: Browser is not downloaded. Run "npm install" or "yarn install"**
+
+Some users have [reported](https://github.com/ruimarinho/gsts/issues/20) issue getting puppeteer up and running when install gsts globally with a message that the browser cannot be downloaded.
+
+If you encounter this error, please run the following commands as a workaround:
+
+```shell
+cd /usr/local/lib/node_modules/gsts/node_modules/puppeteer
+node install.js
+```
+
 ## License
 
 MIT
