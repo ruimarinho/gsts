@@ -1,14 +1,17 @@
-![gsts](images/logo/cover.png)
+<p align="center">
+    <img src="images/logo/cover.png" height="96">
+  <p align="center">AWS STS credentials via Google Workspace</p>
+</p>
 
-`gsts` (short for `Google STS`) is a fork of [aws-google-auth](https://github.com/cevoaustralia/aws-google-auth) based on [puppeteer](https://pptr.dev) instead of scraping which aims to obtain and store AWS STS credentials to interact with Amazon services by authenticating against a pre-configured G Suite SAML instance.
+`gsts` (short for `Google STS`) is a fork of [aws-google-auth](https://github.com/cevoaustralia/aws-google-auth) based on [puppeteer](https://pptr.dev) instead of scraping which aims to obtain and store AWS STS credentials to interact with Amazon services by authenticating against a pre-configured Google Workspace SAML instance.
 
-This allows you to configure AWS to rely on G Suite as your identity provider, moving the responsibility away from Amazon into Google to validate your login credentials. This is a widly popular solution when looking to offer Single-Sign On capabilities inside organizations.
+This allows you to configure AWS to rely on Google Workspace as your identity provider, moving the responsibility away from Amazon into Google to validate your login credentials. This is a widly popular solution when looking to offer Single-Sign On capabilities inside organizations.
 
 The problem is that this flow is tailored for the web which makes command-line usage a lot more difficult. This utility is helper around that.
 
 #### Features:
 
-* First-time only headful design for interactively entering your G Suite credentials.
+* First-time only headful design for interactively entering your Google Workspace credentials.
 * Full support for all 2FA methods as provided by Google, including [security keys](#security-keys--webauthn--u2f).
 * Persistent headless re-authentication system.
 * Supports custom session durations (from 15min to 12h).
@@ -178,7 +181,7 @@ Options:
                                      daemon
                                  [default: "/usr/local/var/log/gsts.stderr.log"]
   --enable-experimental-u2f-support  Enable experimental U2F support
-  --json                             JSON output (compatible with AWS config's
+  --json                             JSON output (compatible with AWS config
                                      credential_process)
   --force                            Force re-authorization even with valid
                                      session
@@ -205,17 +208,17 @@ For compatibility reasons, most environment variables supported [aws-google-auth
 
 ## Discovery of IDP and SP IDs
 
-If you're the admin of G Suite, after configuring the SAML application for AWS you can extract the SP ID by looking at the `service` parameter of the SAML AWS application page.
+If you're the admin of Google Workspace, after configuring the SAML application for AWS you can extract the SP ID by looking at the `service` parameter of the SAML AWS application page.
 
-<img src="images/gsuite-sp-id.png" width="800px">
+<img src="images/google-workspace-sp-id.png" width="800px">
 
 The IDP ID can be found under _Security > Set up single sign-on (SSO) for SAML applications_ as the parameter `idpid`.
 
-<img src="images/gsuite-idp-id.png" width="800px">
+<img src="images/google-workspace-idp-id.png" width="800px">
 
 In case you are using a pre-configured AWS SAML application as traditionally available under the dotted menu on any Google app (Gmail, Calendar and so on) you can instead right-click the AWS icon and copy the link:
 
-<img src="images/gsuite-aws-app.png" width="300px">
+<img src="images/google-workspace-aws-app.png" width="300px">
 
 The copied URL will be in the format of `https://accounts.google.com/o/saml2/initsso?idpid=<IDP_ID>&spid=<SP_ID>&forceauthn=false`.
 
