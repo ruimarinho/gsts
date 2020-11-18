@@ -35,11 +35,9 @@
     "libsaml": "^1.0.0",
     "open": "^7.0.3",
     "ora": "^4.0.3",
+    "playwright": "^1.6.2",
     "plist": "^3.0.1",
     "prompts": "^2.3.2",
-    "puppeteer": "^2.1.1",
-    "puppeteer-extra": "^3.1.9",
-    "puppeteer-extra-plugin-stealth": "^2.4.9",
     "trash": "^6.1.1",
     "yargs": "^15.3.1"
   },

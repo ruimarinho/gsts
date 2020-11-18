@@ -85,8 +85,8 @@ class CredentialsManager {
     this.parser = new Parser(logger);
   }
 
-  async prepareRoleWithSAML(response, customRoleArn) {
-    const { roles, samlAssertion } = await this.parser.parseSamlResponse(response, customRoleArn);
+  async prepareRoleWithSAML(samlResponse, customRoleArn) {
+    const { roles, samlAssertion } = await this.parser.parseSamlResponse(samlResponse, customRoleArn);
 
     if (!customRoleArn) {
       this.logger.debug('A custom role ARN not been set so returning all parsed roles');

@@ -24,7 +24,7 @@ class Parser {
   }
 
   async parseSamlResponse(response) {
-    const samlAssertion = unescape(parse(response).SAMLResponse);
+    const samlAssertion = response.SAMLResponse;
     const saml = new Saml(samlAssertion);
     const roles = [];
 
