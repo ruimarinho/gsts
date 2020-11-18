@@ -45,7 +45,9 @@ const SAML_SESSION_BASIC_WITH_MULTIPLE_ROLES = 'saml-session-basic-with-multiple
  */
 
 async function getResponseFromAssertion(assertion) {
-  return `SAMLResponse=${escape(assertion)}`;
+  return {
+    SAMLResponse: assertion
+  };
 }
 
 async function getSampleAssertion(name) {
