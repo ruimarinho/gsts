@@ -29,6 +29,12 @@ brew tap ruimarinho/tap
 brew install gsts
 ```
 
+#### Big Sur Compatibility
+
+Under Big Sur, if you're not using `Terminal.app` to launch `gsts`, you will need to manually grant the Bluetooth permission under Security & Privacy preferences to your terminal app (e.g. `iTerm`), otherwise `puppeteer` is unable to manage a permission request for Chrome / Chromium to use Bluetooth and crashes immediately.
+
+![big-sur-bluetooth-permissions](images/big-sur-bluetooth-iterm.png)
+
 ### Other Platforms
 
 Install the package via `npm`:
