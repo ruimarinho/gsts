@@ -1,6 +1,6 @@
 {
   "name": "gsts",
-  "version": "2.4.3",
+  "version": "2.4.4",
   "description": "Google authentication for the AWS Management Console via Amazon's STS service",
   "license": "MIT",
   "repository": "ruimarinho/gsts",
@@ -8,7 +8,9 @@
     "name": "Rui Marinho",
     "email": "ruipmarinho@gmail.com"
   },
-  "bin": "./index.js",
+  "bin": {
+    "gsts": "index.js"
+  },
   "files": [
     "credentials-manager.js",
     "daemonizer.js",
