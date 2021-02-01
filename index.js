@@ -223,7 +223,6 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
     defaultViewport: device.viewport,
     executablePath: argv.puppeteerExecutablePath,
     headless: !argv.headful,
-    ignoreDefaultArgs: ['--enable-automation'],
     userDataDir: paths.data
   };
 
@@ -329,12 +328,6 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
   });
 
   page.on('requestfailed', async request => {
-    // The request to the AWS console is aborted on successful login for performance reasons,
-    // so in this particular case it's actually an expected outcome.
-    if (request.url().startsWith('https://console.aws.amazon.com/console/home?state')) {
-      return;
-    }
-
     logger.debug(`Request to "${request.url()}" has been aborted`);
     await browser.close();
   });
