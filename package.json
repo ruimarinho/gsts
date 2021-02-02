@@ -1,6 +1,6 @@
 {
   "name": "gsts",
-  "version": "2.4.4",
+  "version": "3.0.0",
   "description": "Google authentication for the AWS Management Console via Amazon's STS service",
   "license": "MIT",
   "repository": "ruimarinho/gsts",
