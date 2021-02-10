@@ -35,7 +35,7 @@
     "libsaml": "^1.0.0",
     "open": "^7.0.3",
     "ora": "^4.0.3",
-    "playwright": "^1.6.2",
+    "playwright": "^1.8.0",
     "plist": "^3.0.1",
     "prompts": "^2.3.2",
     "trash": "^6.1.1",
