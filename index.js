@@ -255,8 +255,8 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
             });
 
             if (!response.hasOwnProperty('arn')) {
-              route.abort();
               logger.error('You must choose one of the available role ARNs to authenticate or, alternatively, set one directly using the --aws-role-arn option');
+              route.abort();
               return;
             }
 
@@ -281,43 +281,48 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
         logger.debug('An error has ocurred while authenticating', e);
 
         if (e instanceof errors.RoleNotFoundError) {
-          route.abort();
           logger.error(`Role ARN "${argv.awsRoleArn}" not found in the list of available roles ${JSON.stringify(e.roles)}`);
+          route.abort();
           return;
         }
 
         if (['ValidationError', 'InvalidIdentityToken'].includes(e.code)) {
-          route.abort();
           logger.error(`A remote error ocurred while assuming role: ${e.message}`);
+          route.abort();
           return;
         }
 
-        route.abort();
         logger.error(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
+        route.abort();
         return;
       }
 
+      logger.debug(`Initiating request to "${route.request().url()}"`);
       route.continue();
       return;
     }
 
     if (/google|gstatic|youtube|googleusercontent|googleapis|gvt1/.test(route.request().url())) {
+      logger.debug(`Allowing request to "${route.request().url()}"`);
       route.continue();
       return;
     }
 
+    logger.debug(`Aborting request to "${route.request().url()}"`);
     route.abort();
   });
 
   page.on('requestfailed', async request => {
+    logger.debug(`Request to "${request.url()}" has failed`);
+
     // The request to the AWS console is aborted on successful login for performance reasons,
     // so in this particular case it's actually an expected outcome.
     if (request.url().startsWith('https://console.aws.amazon.com/console/home')) {
+      logger.debug(`Request to "${request.url()}" matches AWS console which means authentication was successful`);
+
       await context.close();
       return;
     }
-
-    logger.debug(`Request to "${request.url()}" has been aborted`);
   });
 
   try {
@@ -354,7 +359,6 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
 
       if (argv.username) {
         logger.debug(`Pre-filling email with ${argv.username}`);
-
         await page.evaluate((data) => document.querySelector('input[type=email]').value = data.username, { username: argv.username })
       }
 
@@ -374,5 +378,4 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
       }
     }
   }
-
 })();
