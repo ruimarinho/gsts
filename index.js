@@ -79,7 +79,6 @@ const cliOptions = {
   },
   'engine-executable-path': {
     description: 'Set custom executable path for browser engine',
-    default: null,
     required: false
   },
   'sp-id': {
