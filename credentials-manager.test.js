@@ -22,14 +22,43 @@ jest.mock('./logger');
 const logger = new Logger();
 
 describe('prepareRoleWithSAML', () => {
-  test('returns all roles available if custom role has not been requested', async () => {
+  test('returns first role available if only one role is available', async () => {
+    const assertion = await fixtures.getSampleAssertion(fixtures.SAML_SESSION_BASIC);
+    const response = await fixtures.getResponseFromAssertion(assertion);
+
+    const credentialsManager = new CredentialsManager(logger);
+    const { roleToAssume, availableRoles, samlAssertion } = await credentialsManager.prepareRoleWithSAML(response);
+    const expectedRoleToAssume = new Role('foobar', 'arn:aws:iam::123456789:role/foobar', 'arn:aws:iam::123456789:saml-provider/GSuite');
+
+    await expect(roleToAssume).toEqual(expectedRoleToAssume);
+    await expect(availableRoles).toEqual([expectedRoleToAssume]);
+    await expect(samlAssertion).toEqual(assertion);
+  });
+
+  test('returns all roles available if custom role has not been requested and multiple roles are available', async () => {
     const assertion = await fixtures.getSampleAssertion(fixtures.SAML_SESSION_BASIC_WITH_MULTIPLE_ROLES);
     const response = await fixtures.getResponseFromAssertion(assertion);
 
     const credentialsManager = new CredentialsManager(logger);
-    const { roles, samlAssertion } = await credentialsManager.prepareRoleWithSAML(response);
+    const { roleToAssume, availableRoles, samlAssertion } = await credentialsManager.prepareRoleWithSAML(response);
 
-    await expect(roles).toEqual([
+    await expect(roleToAssume).toBeNull();
+    await expect(availableRoles).toEqual([
+      new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite'),
+      new Role('Foobiz', 'arn:aws:iam::987654321:role/Foobiz', 'arn:aws:iam::987654321:saml-provider/GSuite')
+    ]);
+    await expect(samlAssertion).toEqual(assertion);
+  });
+
+  test('returns custom role if custom role requested was found', async () => {
+    const assertion = await fixtures.getSampleAssertion(fixtures.SAML_SESSION_BASIC_WITH_MULTIPLE_ROLES);
+    const response = await fixtures.getResponseFromAssertion(assertion);
+
+    const credentialsManager = new CredentialsManager(logger);
+    const { roleToAssume, availableRoles, samlAssertion } = await credentialsManager.prepareRoleWithSAML(response, 'arn:aws:iam::123456789:role/Foobar');
+
+    await expect(roleToAssume).toEqual(new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite'));
+    await expect(availableRoles).toEqual([
       new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite'),
       new Role('Foobiz', 'arn:aws:iam::987654321:role/Foobiz', 'arn:aws:iam::987654321:saml-provider/GSuite')
     ]);
@@ -55,19 +84,6 @@ describe('prepareRoleWithSAML', () => {
     ]);
     await expect(error).toEqual(expected);
     await expect(error.roles).toEqual(expected.roles);
-  });
-
-  test('returns custom role only if custom role is available', async () => {
-    const assertion = await fixtures.getSampleAssertion(fixtures.SAML_SESSION_BASIC_WITH_MULTIPLE_ROLES);
-    const response = await fixtures.getResponseFromAssertion(assertion);
-
-    const credentialsManager = new CredentialsManager(logger);
-    const { roles, samlAssertion } = await credentialsManager.prepareRoleWithSAML(response, 'arn:aws:iam::123456789:role/Foobar');
-
-    await expect(roles).toEqual([
-      new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite'),
-    ]);
-    await expect(samlAssertion).toEqual(assertion);
   });
 });
 

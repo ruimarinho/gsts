@@ -92,7 +92,8 @@ class CredentialsManager {
       this.logger.debug('A custom role ARN not been set so returning all parsed roles');
 
       return {
-        roles,
+        roleToAssume: roles.length === 1 ? roles[0] : null,
+        availableRoles: roles,
         samlAssertion
       }
     }
@@ -106,7 +107,8 @@ class CredentialsManager {
     this.logger.debug('Found custom role ARN "%s" with principal ARN "%s"', customRole.roleArn, customRole.principalArn);
 
     return {
-      roles: [customRole],
+      roleToAssume: customRole,
+      availableRoles: roles,
       samlAssertion
     }
   }
@@ -260,7 +262,7 @@ class CredentialsManager {
     }
 
     if (roleArn && credentials.aws_role_arn !== roleArn)  {
-      this.logger.warn('Found credentials for a different role ARN');
+      this.logger.warn('Found credentials for a different role ARN (found "%s" != received "%s")', credentials.aws_role_arn, roleArn);
 
       return { isValid: false, expiresAt: null };
     }

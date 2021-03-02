@@ -233,15 +233,13 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
       isAuthenticated = true;
 
       try {
-        const { samlAssertion, roles } = await credentialsManager.prepareRoleWithSAML(route.request().postDataJSON(), argv.awsRoleArn);
+        let { availableRoles, roleToAssume, samlAssertion } = await credentialsManager.prepareRoleWithSAML(route.request().postDataJSON(), argv.awsRoleArn);
 
-        let role = roles[0];
-
-        if (roles.length > 1) {
+        if (!roleToAssume && availableRoles.length > 1) {
           logger.stop();
 
           if (process.stdout.isTTY) {
-            const choices = roles.reduce((accumulator, role) => {
+            const choices = availableRoles.reduce((accumulator, role) => {
               accumulator.push({ title: role.roleArn })
               return accumulator;
             }, []);
@@ -259,18 +257,30 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
               return;
             }
 
-            role = roles[response.arn];
+            console.log(require('util').inspect(availableRoles, { depth: null }));
+            roleToAssume = availableRoles[response.arn];
 
-            logger.info(`You may skip this step by invoking gsts with --aws-role-arn=${role.roleArn}`);
+            logger.info(`You may skip this step by invoking gsts with --aws-role-arn=${roleToAssume.roleArn}`);
           } else {
-            logger.debug(`Assuming role "${role.roleArn}" from the list of available roles %o due to non-interactive mode`, roles);
+            logger.debug(`Assuming role "${roleToAssume.roleArn}" from the list of available roles %o due to non-interactive mode`, availableRoles);
           }
         }
 
-        await credentialsManager.assumeRoleWithSAML(samlAssertion, argv.awsSharedCredentialsFile, argv.awsProfile, role, argv.awsSessionDuration);
+        await credentialsManager.assumeRoleWithSAML(samlAssertion, argv.awsSharedCredentialsFile, argv.awsProfile, roleToAssume, argv.awsSessionDuration);
+
+        logger.debug(`Initiating request to "${route.request().url()}"`);
+        route.continue();
+
+        // AWS presents an account selection form when multiple roles are available
+        // before redirecting to the console. If we see this form, then we know we
+        // are logged in.
+        if (availableRoles.length > 1) {
+          await page.waitForSelector('#saml_form');
+          await context.close();
+        }
 
         if (argv.verbose) {
-          logger.debug(`Login successful${ argv.verbose ? ` and credentials stored in "${argv.awsSharedCredentialsFile}" under AWS profile "${argv.awsProfile}" with role ARN "${role.roleArn}"` : '!' }`);
+          logger.debug(`Login successful${ argv.verbose ? ` and credentials stored in "${argv.awsSharedCredentialsFile}" under AWS profile "${argv.awsProfile}" with role ARN "${roleToAssume.roleArn}"` : '!' }`);
         } else {
           logger.succeed('Login successful!');
         }
@@ -296,8 +306,6 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
         return;
       }
 
-      logger.debug(`Initiating request to "${route.request().url()}"`);
-      route.continue();
       return;
     }
 
