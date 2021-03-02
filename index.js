@@ -328,12 +328,6 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
       logger.debug(`Request to "${request.url()}" matches AWS console which means authentication was successful`);
 
       await context.close();
-
-      if (argv.headful) {
-        // Workaround for a new behaviour introduced with playwright 1.8+ and node 14+ where
-        // the closing the context won't terminate the headful process.
-        process.exit(0);
-      }
       return;
     }
   });
