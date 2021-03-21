@@ -16,6 +16,7 @@ const path = require('path');
 const paths = require('env-paths')('gsts', { suffix: '' });
 const prompts = require('prompts');
 const trash = require('trash');
+const url = require('url');
 
 // Define all available cli options.
 const cliOptions = {
@@ -324,7 +325,8 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
 
     // The request to the AWS console is aborted on successful login for performance reasons,
     // so in this particular case it's actually an expected outcome.
-    if (request.url().startsWith('https://console.aws.amazon.com/console/home')) {
+    const parsedURL = url.parse(request.url());
+    if (parsedURL.host.endsWith('console.aws.amazon.com') && parsedURL.pathname === '/console/home') {
       logger.debug(`Request to "${request.url()}" matches AWS console which means authentication was successful`);
 
       await context.close();
