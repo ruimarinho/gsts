@@ -17,6 +17,7 @@ const paths = require('env-paths')('gsts', { suffix: '' });
 const prompts = require('prompts');
 const trash = require('trash');
 const url = require('url');
+const endpointVerification = require('./endpointVerification')
 
 // Define all available cli options.
 const cliOptions = {
@@ -52,6 +53,10 @@ const cliOptions = {
   'daemon-error-log-path': {
     description: `Path for storing the error log of the daemon`,
     default: '/usr/local/var/log/gsts.stderr.log'
+  },
+  'endpoint-verification': {
+    boolean: false,
+    description: `Enable endpoint verification`
   },
   'json': {
     boolean: false,
@@ -223,6 +228,16 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
 
   if (argv.engineExecutablePath) {
     options.executablePath = argv.engineExecutablePath;
+  }
+
+  if (argv.endpointVerification) {
+    const pathToExtension = await endpointVerification.huntForExtension()
+
+    if (pathToExtension != null) {
+      options.args = [
+        `--disable-extensions-except=${pathToExtension}`,
+        `--load-extension=${pathToExtension}`]
+    }
   }
 
   const context = await playwright[argv.engine].launchPersistentContext(path.join(paths.data, argv.engine), options);

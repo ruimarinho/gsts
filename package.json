@@ -14,6 +14,7 @@
   "files": [
     "credentials-manager.js",
     "daemonizer.js",
+    "endpointVerification.js",
     "errors.js",
     "index.js",
     "logger.js",
@@ -38,7 +39,9 @@
     "playwright": "^1.8.0",
     "plist": "^3.0.1",
     "prompts": "^2.3.2",
+    "semver": "^7.3.5",
     "trash": "^6.1.1",
+    "untildify": "^4.0.0",
     "yargs": "^15.3.1"
   },
   "devDependencies": {
