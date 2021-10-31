@@ -317,11 +317,22 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
     }
 
     logger.debug(`Aborting request to "${route.request().url()}"`);
-    route.abort();
+
+    // Abort with a specific error so we can tag these requests as being blocked by gsts
+    // instead of a configuration issue (like a custom ARN not being available).
+    route.abort('blockedbyclient');
   });
 
   page.on('requestfailed', async request => {
     logger.debug(`Request to "${request.url()}" has failed`);
+
+    // Requests tagged with this specific error were made by gsts and should result
+    // in a program termination.
+    if (request.failure().errorText !== 'net::ERR_BLOCKED_BY_CLIENT') {
+      logger.debug(`Aborted due to client request`);
+      await context.close();
+      return;
+    }
 
     // The request to the AWS console is aborted on successful login for performance reasons,
     // so in this particular case it's actually an expected outcome.
