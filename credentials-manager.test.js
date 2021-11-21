@@ -415,7 +415,7 @@ describe('assumeRoleWithSAML', () => {
 
       const credentials = await credentialsManager.loadCredentials(awsSharedCredentialsFile);
 
-      expect(credentials).toStrictEqual({
+      expect(credentials).toMatchObject({
         test: {
           aws_access_key_id: 'AAAAAABBBBBBCCCCCCDDDDDD',
           aws_role_arn: 'arn:aws:iam::987654321:role/Foobar',
