@@ -328,8 +328,8 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
 
     // Requests tagged with this specific error were made by gsts and should result
     // in a program termination.
-    if (request.failure().errorText !== 'net::ERR_BLOCKED_BY_CLIENT') {
-      logger.debug(`Aborted due to client request`);
+    if (request.failure().errorText === 'net::ERR_BLOCKED_BY_CLIENT') {
+      logger.debug(`Request to ${request.url()} has failed due to client request block`);
       await context.close();
       return;
     }
