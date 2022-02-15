@@ -126,9 +126,9 @@ const logger = new Logger(argv.verbose, process.stderr.isTTY);
  */
 
 process.on('unhandledRejection', e => {
-	logger.stop();
-	console.error(e);
-	process.exit(1);
+  logger.stop();
+  console.error(e);
+  process.exit(1);
 });
 
 /**
@@ -244,6 +244,15 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
               accumulator.push({ title: role.roleArn })
               return accumulator;
             }, []);
+
+            choices.sort((a, b) => {
+              if (a.title < b.title) {
+                return -1;
+              } else if (a.title > b.title) {
+                return 1;
+              }
+              return 0;
+            });
 
             const response = await prompts({
               type: 'select',
