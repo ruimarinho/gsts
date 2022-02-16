@@ -39,9 +39,11 @@ test('parses multiple roles from saml response', async () => {
   const response = await fixtures.getResponseFromAssertion(assertion);
   const { roles } = await parser.parseSamlResponse(response);
 
+  // Note: The order of the role's are as defined in the assertion
   const expected = [
-    new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite'),
-    new Role('Foobiz', 'arn:aws:iam::987654321:role/Foobiz', 'arn:aws:iam::987654321:saml-provider/GSuite')
+    new Role('Foobiz', 'arn:aws:iam::987654321:role/Foobiz', 'arn:aws:iam::987654321:saml-provider/GSuite'),
+    new Role('Admin', 'arn:aws:iam::987654321:role/Admin', 'arn:aws:iam::987654321:saml-provider/GSuite'),
+    new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite')
   ];
 
   expect(roles).toMatchObject(expected);

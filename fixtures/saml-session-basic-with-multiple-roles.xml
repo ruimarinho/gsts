@@ -44,9 +44,11 @@
       </saml2:Attribute>
       <saml2:Attribute Name="https://aws.amazon.com/SAML/Attributes/Role">
         <saml2:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:anyType">arn:aws:iam::123456789:role/Foobar,arn:aws:iam::123456789:saml-provider/GSuite</saml2:AttributeValue>
-        <saml2:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:anyType">arn:aws:iam::987654321:role/Foobiz,arn:aws:iam::987654321:saml-provider/GSuite</saml2:AttributeValue>
+        <saml2:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:anyType">arn:aws:iam::987654321:role/Admin,arn:aws:iam::987654321:saml-provider/GSuite</saml2:AttributeValue>
+        <saml2:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:anyType">arn:aws:iam::123456789:role/Foobar,arn:aws:iam::123456789:saml-provider/GSuite</saml2:AttributeValue>
       </saml2:Attribute>
     </saml2:AttributeStatement>
     <saml2:AuthnStatement AuthnInstant="2020-03-17T15:41:44.000Z" SessionIndex="_2">

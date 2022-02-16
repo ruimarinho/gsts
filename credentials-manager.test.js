@@ -45,6 +45,7 @@ describe('prepareRoleWithSAML', () => {
     await expect(roleToAssume).toBeNull();
     await expect(availableRoles).toEqual([
       new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite'),
+      new Role('Admin', 'arn:aws:iam::987654321:role/Admin', 'arn:aws:iam::987654321:saml-provider/GSuite'),
       new Role('Foobiz', 'arn:aws:iam::987654321:role/Foobiz', 'arn:aws:iam::987654321:saml-provider/GSuite')
     ]);
     await expect(samlAssertion).toEqual(assertion);
@@ -60,6 +61,7 @@ describe('prepareRoleWithSAML', () => {
     await expect(roleToAssume).toEqual(new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite'));
     await expect(availableRoles).toEqual([
       new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite'),
+      new Role('Admin', 'arn:aws:iam::987654321:role/Admin', 'arn:aws:iam::987654321:saml-provider/GSuite'),
       new Role('Foobiz', 'arn:aws:iam::987654321:role/Foobiz', 'arn:aws:iam::987654321:saml-provider/GSuite')
     ]);
     await expect(samlAssertion).toEqual(assertion);
@@ -80,6 +82,7 @@ describe('prepareRoleWithSAML', () => {
 
     const expected = new errors.RoleNotFoundError([
       new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite'),
+      new Role('Admin', 'arn:aws:iam::987654321:role/Admin', 'arn:aws:iam::987654321:saml-provider/GSuite'),
       new Role('Foobiz', 'arn:aws:iam::987654321:role/Foobiz', 'arn:aws:iam::987654321:saml-provider/GSuite')
     ]);
     await expect(error).toEqual(expected);
