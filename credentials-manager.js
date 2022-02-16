@@ -88,6 +88,17 @@ class CredentialsManager {
   async prepareRoleWithSAML(samlResponse, customRoleArn) {
     const { roles, samlAssertion } = await this.parser.parseSamlResponse(samlResponse, customRoleArn);
 
+    if (roles && roles.length) {
+      roles.sort((a, b) => {
+        if (a.roleArn < b.roleArn) {
+          return -1;
+        } else if (a.roleArn > b.roleArn) {
+          return 1;
+        }
+        return 0;
+      });
+    }
+
     if (!customRoleArn) {
       this.logger.debug('A custom role ARN not been set so returning all parsed roles');
 

@@ -240,15 +240,6 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
           logger.stop();
 
           if (process.stdout.isTTY) {
-            availableRoles.sort((a, b) => {
-              if (a.roleArn < b.roleArn) {
-                return -1;
-              } else if (a.roleArn > b.roleArn) {
-                return 1;
-              }
-              return 0;
-            });
-
             const choices = availableRoles.reduce((accumulator, role) => {
               accumulator.push({ title: role.roleArn })
               return accumulator;
