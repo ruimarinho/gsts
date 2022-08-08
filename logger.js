@@ -4,7 +4,15 @@
  */
 
 const ora = require('ora');
-const util = require('util')
+const util = require('util');
+
+// Map Playwright log levels to custom logger levels.
+const PLAYWRIGHT_LOG_LEVELS = {
+  error: 'error',
+  info: 'info',
+  verbose: 'debug',
+  warning: 'warn'
+};
 
 /**
  * Logger with support for TTY detection.
@@ -62,4 +70,5 @@ class Logger {
     }
 }
 
-module.exports = Logger;
+module.exports.Logger = Logger;
+module.exports.PLAYWRIGHT_LOG_LEVELS = PLAYWRIGHT_LOG_LEVELS;

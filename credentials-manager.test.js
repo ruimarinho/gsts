@@ -4,8 +4,8 @@
  */
 
 
+const { Logger } = require('./logger');
 const CredentialsManager = require('./credentials-manager');
-const Logger = require('./logger');
 const STS = require('aws-sdk/clients/sts');
 const Role = require('./role');
 const errors = require('./errors');

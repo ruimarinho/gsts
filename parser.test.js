@@ -4,7 +4,7 @@
  */
 
 
-const Logger = require('./logger');
+const { Logger } = require('./logger');
 const Parser = require('./parser');
 const Role = require('./role');
 const fixtures = require('./fixtures');

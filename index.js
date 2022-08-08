@@ -4,10 +4,10 @@
  * Module dependencies.
  */
 
+const { Logger, PLAYWRIGHT_LOG_LEVELS } = require('./logger');
 const playwright = require('playwright');
 const CredentialsManager = require('./credentials-manager');
 const Daemonizer = require('./daemonizer');
-const Logger = require('./logger')
 const childProcess = require('child_process');
 const errors = require('./errors');
 const homedir = require('os').homedir();
@@ -212,7 +212,11 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
 
   const options = {
     headless: !argv.headful,
-    userDataDir: paths.data
+    userDataDir: paths.data,
+    logger: {
+      isEnabled: (name, severity) => argv.verbose,
+      log: (name, severity, message, args) => logger[PLAYWRIGHT_LOG_LEVELS[severity]](`Playwright: ${name} ${message}`, args)
+    }
   };
 
   if (argv.engineExecutablePath) {
