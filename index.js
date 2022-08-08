@@ -126,9 +126,9 @@ const logger = new Logger(argv.verbose, process.stderr.isTTY);
  */
 
 process.on('unhandledRejection', e => {
-	logger.stop();
-	console.error(e);
-	process.exit(1);
+  logger.stop();
+  console.error(e);
+  process.exit(1);
 });
 
 /**
