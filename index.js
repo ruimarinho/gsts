@@ -310,7 +310,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
       return;
     }
 
-    if (/google|gstatic|youtube|googleusercontent|googleapis|gvt1/.test(route.request().url())) {
+    if (/google|gstatic|youtube|googleusercontent|googleapis|gvt1|okta/.test(route.request().url())) {
       logger.debug(`Allowing request to "${route.request().url()}"`);
       route.continue();
       return;
