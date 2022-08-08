@@ -329,6 +329,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
     if (request.failure().errorText === 'net::ERR_BLOCKED_BY_CLIENT') {
       logger.debug(`Request to ${request.url()} has failed due to client request block`);
       await context.close();
+      logger.debug(`Closed context of ${request.url()}`);
       return;
     }
 
