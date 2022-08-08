@@ -210,12 +210,6 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
     }
   }
 
-  const device = {
-    platform: process.platform === 'darwin' ? 'MacIntel' : process.platform === 'linux' ? 'Linux x86_64' : 'Win32',
-    viewport: { width: 1200, height: 800 },
-    deviceScaleFactor: 1
-  };
-
   const options = {
     headless: !argv.headful,
     userDataDir: paths.data
