@@ -44,6 +44,14 @@
   "devDependencies": {
     "jest": "^27.3.1"
   },
+  "overrides": {
+    "libsaml": {
+      "xmldom": "^0.5.0"
+    }
+  },
+  "resolutions": {
+    "libsaml/xmldom": "^0.5.0"
+  },
   "engines": {
     "node": "^12.20.0 || ^14.13.1 || >=16.0.0"
   },
