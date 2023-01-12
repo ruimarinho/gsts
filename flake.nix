@@ -46,10 +46,9 @@
 
           CHROMIUM_PATH = "${pkgs.chromium}/bin/chromium";
 
-          buildInputs = [
+          packages = [
             defaultPackage
             pkgs.chromium
-            pkgs.cowsay
           ];
         };
       }
