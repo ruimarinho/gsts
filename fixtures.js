@@ -3,8 +3,7 @@
  * Dependencies.
  */
 
-const { escape } = require('querystring');
-const fs = require('fs').promises;
+import { readFile } from 'node:fs/promises';
 
 /**
  * Samples
@@ -51,14 +50,14 @@ async function getResponseFromAssertion(assertion) {
 }
 
 async function getSampleAssertion(name) {
-  return Buffer.from(await fs.readFile(`fixtures/${name}.xml`, 'utf-8'), 'ascii').toString('base64')
+  return Buffer.from(await readFile(`fixtures/${name}.xml`, 'utf-8'), 'ascii').toString('base64')
 }
 
 /**
  * Exports.
  */
 
-module.exports = {
+export {
   SAML_SESSION_BASIC,
   SAML_SESSION_BASIC_GOV_CLOUD_US,
   SAML_SESSION_BASIC_CN,

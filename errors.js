@@ -1,13 +1,11 @@
 
 /**
- * Export errors codes.
+ * RoleNotFoundError class.
  */
 
-module.exports = {
-  RoleNotFoundError: class RoleNotFoundError extends Error {
-      constructor(roles) {
-          super('Custom role not found');
-          this.roles = roles;
-      }
-  }
+export class RoleNotFoundError extends Error {
+    constructor(roles) {
+        super('Custom role not found');
+        this.roles = roles;
+    }
 }

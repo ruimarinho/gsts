@@ -28,15 +28,15 @@
   "dependencies": {
     "@aws-sdk/client-sts": "^3.276.0",
     "debug": "^4.3.4",
-    "env-paths": "^2.0.0",
+    "env-paths": "^3.0.0",
     "ini": "^3.0.1",
     "libsaml": "^1.0.0",
     "open": "^8.4.2",
-    "ora": "^5.4.1",
+    "ora": "^6.1.2",
     "playwright": "^1.31.2",
     "plist": "^3.0.6",
     "prompts": "^2.4.2",
-    "trash": "^7.2.0",
+    "trash": "^8.1.1",
     "yargs": "^17.7.1"
   },
   "devDependencies": {
@@ -56,6 +56,7 @@
     "node": "^12.20.0 || ^14.13.1 || >=16.0.0"
   },
   "scripts": {
-    "test": "jest"
-  }
+    "test": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js"
+  },
+  "type": "module"
 }

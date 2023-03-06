@@ -4,12 +4,26 @@
  */
 
 
-const { Logger } = require('./logger');
-const Parser = require('./parser');
-const Role = require('./role');
-const fixtures = require('./fixtures');
+import { Logger } from './logger.js';
+import { jest } from '@jest/globals';
+import { Parser } from './parser.js';
+import { Role } from './role.js';
+import * as fixtures from './fixtures.js';
 
-jest.mock('./logger');
+jest.unstable_mockModule('./logger.js', async () => ({
+  Logger: function Logger() {
+    return {
+      format: jest.fn(),
+      start: jest.fn(),
+      stop: jest.fn(),
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      succeed: jest.fn()
+    }
+  }
+}));
 
 const logger = new Logger();
 const parser = new Parser(logger);

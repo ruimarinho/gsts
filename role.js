@@ -4,7 +4,7 @@
  * Role ARN and Principal ARN.
  */
 
-module.exports = class Role {
+export class Role {
   constructor(name, roleArn, principalArn, sessionDuration) {
     if (!name) {
       throw new Error('Role name is required');
