@@ -206,7 +206,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
       if (argv.verbose) {
         logger.debug('Skipping re-authorization as session is valid until %s. Use --force to ignore.', new Date(session.expiresAt));
       } else {
-        logger.info('Login is still valid, no need to re-authorize!');
+        logger.stop();
       }
 
       formatOutput(argv.awsSharedCredentialsFile, argv.awsProfile, argv.json ? 'json' : null);
