@@ -5,7 +5,7 @@
 
 const { dirname } = require('path');
 const Parser = require('./parser');
-const STS = require('aws-sdk/clients/sts');
+const { STSClient, AssumeRoleWithSAMLCommand } = require('@aws-sdk/client-sts');
 const errors = require('./errors');
 const ffs = require('fs');
 const ini = require('ini');
@@ -128,19 +128,20 @@ class CredentialsManager {
    * Parse SAML response and assume role-.
    */
 
-  async assumeRoleWithSAML(samlAssertion, awsSharedCredentialsFile, awsProfile, role, customSessionDuration) {
+  async assumeRoleWithSAML(samlAssertion, awsSharedCredentialsFile, awsProfile, awsRegion, role, customSessionDuration) {
     let sessionDuration = role.sessionDuration;
 
     if (customSessionDuration) {
       sessionDuration = customSessionDuration;
 
       try {
-        await (new STS()).assumeRoleWithSAML({
+        await (new STSClient({ region: awsRegion })).send(new AssumeRoleWithSAMLCommand({
           DurationSeconds: sessionDuration,
           PrincipalArn: role.principalArn,
           RoleArn: role.roleArn,
           SAMLAssertion: samlAssertion
-        }).promise();
+        }));
+
       } catch (e) {
         if (e.code !== 'ValidationError' ||  !/durationSeconds/.test(e.message)) {
           throw e;
@@ -160,12 +161,12 @@ class CredentialsManager {
       }
     }
 
-    const stsResponse = await (new STS()).assumeRoleWithSAML({
+    const stsResponse = await (new STSClient({ region: awsRegion })).send(new AssumeRoleWithSAMLCommand({
       DurationSeconds: sessionDuration,
       PrincipalArn: role.principalArn,
       RoleArn: role.roleArn,
       SAMLAssertion: samlAssertion
-    }).promise();
+    }));
 
     this.logger.debug('Role ARN "%s" has been assumed %O', role.roleArn, stsResponse);
 

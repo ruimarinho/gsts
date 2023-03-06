@@ -35,6 +35,11 @@ const cliOptions = {
     description: 'AWS shared credentials file',
     default: path.join(homedir, '.aws', 'credentials')
   },
+  'aws-region': {
+    description: 'AWS region to send requests to',
+    required: true,
+    default: process.env.AWS_DEFAULT_REGION
+  },
   'clean': {
     boolean: false,
     config: false,
@@ -265,7 +270,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
           }
         }
 
-        await credentialsManager.assumeRoleWithSAML(samlAssertion, argv.awsSharedCredentialsFile, argv.awsProfile, roleToAssume, argv.awsSessionDuration);
+        await credentialsManager.assumeRoleWithSAML(samlAssertion, argv.awsSharedCredentialsFile, argv.awsProfile, argv.awsRegion, roleToAssume, argv.awsSessionDuration);
 
         logger.debug(`Initiating request to "${route.request().url()}"`);
         route.continue();

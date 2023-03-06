@@ -8,9 +8,7 @@
     "name": "Rui Marinho",
     "email": "ruipmarinho@gmail.com"
   },
-  "bin": {
-    "gsts": "index.js"
-  },
+  "bin": "index.js",
   "files": [
     "credentials-manager.js",
     "daemonizer.js",
@@ -28,29 +26,31 @@
     "auth"
   ],
   "dependencies": {
-    "aws-sdk": "^2.643.0",
-    "debug": "^4.1.1",
-    "env-paths": "^2.2.1",
-    "ini": "^2.0.0",
+    "@aws-sdk/client-sts": "^3.276.0",
+    "debug": "^4.3.4",
+    "env-paths": "^2.0.0",
+    "ini": "^3.0.1",
     "libsaml": "^1.0.0",
-    "open": "^8.4.0",
+    "open": "^8.4.2",
     "ora": "^5.4.1",
-    "playwright": "^1.17.0",
-    "plist": "^3.0.4",
+    "playwright": "^1.31.2",
+    "plist": "^3.0.6",
     "prompts": "^2.4.2",
     "trash": "^7.2.0",
-    "yargs": "^15.3.1"
+    "yargs": "^17.7.1"
   },
   "devDependencies": {
-    "jest": "^27.3.1"
+    "aws-sdk-client-mock": "^2.1.0",
+    "aws-sdk-client-mock-jest": "^2.1.0",
+    "jest": "^29.4.3"
   },
   "overrides": {
     "libsaml": {
-      "xmldom": "^0.5.0"
+      "xmldom": "^0.6.0"
     }
   },
   "resolutions": {
-    "libsaml/xmldom": "^0.5.0"
+    "libsaml/xmldom": "^0.6.0"
   },
   "engines": {
     "node": "^12.20.0 || ^14.13.1 || >=16.0.0"
