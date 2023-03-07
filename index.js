@@ -9,12 +9,12 @@ import { CredentialsManager } from './credentials-manager.js';
 import { RoleNotFoundError } from './errors.js';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
-import { parse as urlparse } from 'node:url';
+import { fileURLToPath, parse as urlparse } from 'node:url';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
-import playwright from 'playwright';
 import open from 'open';
 import envpaths from 'env-paths';
+import playwright from 'playwright';
 import prompts from 'prompts';
 import trash from 'trash';
 
@@ -65,15 +65,18 @@ const cliOptions = {
     description: 'Identity Provider ID (IdP ID)',
     required: true
   },
-  'engine': {
+  'playwright-engine': {
     description: 'Set custom browser engine',
     choices: ['chromium', 'firefox', 'webkit'],
     default: 'chromium',
     required: false
   },
-  'engine-executable-path': {
+  'playwright-engine-executable-path': {
     description: 'Set custom executable path for browser engine',
     required: false
+  },
+  'playwright-engine-channel': {
+    choices: ['chrome', 'chrome-beta', 'msedge-beta', 'msedge-dev']
   },
   'sp-id': {
     description: 'Service Provider ID (SP ID)',
@@ -207,20 +210,18 @@ async function formatOutput(content, format) {
     }
   }
 
-  const options = {
+  const playwrightOptions = {
     headless: !argv.headful,
     userDataDir: paths.data,
     logger: {
       isEnabled: () => argv.verbose >= 3,
-      log: (name, severity, message, args) => PLAYWRIGHT_LOG_LEVELS[severity](`Playwright: ${name} ${message}`, args)
-    }
+      log: (name, severity, message, args) => logger[PLAYWRIGHT_LOG_LEVELS[severity]](`Playwright: ${name} ${message}`, args)
+    },
+    channel: argv.playwrightEngineChannel,
+    executablePath: argv.playwrightEngineExecutablePath,
   };
 
-  if (argv.engineExecutablePath) {
-    options.executablePath = argv.engineExecutablePath;
-  }
-
-  const context = await playwright[argv.engine].launchPersistentContext(join(paths.data, argv.engine), options);
+  const context = await playwright[argv.playwrightEngine].launchPersistentContext(join(paths.data, argv.playwrightEngine), playwrightOptions);
   const page = await context.newPage();
   page.setDefaultTimeout(0);
 
@@ -343,7 +344,7 @@ async function formatOutput(content, format) {
       if (!isAuthenticated && !argv.headful) {
         logger.warn('User is not authenticated, spawning headful instance');
 
-        const args = [__filename, '--headful', ...process.argv.slice(2)];
+        const args = [fileURLToPath(import.meta.url), '--headful', ...process.argv.slice(2)];
         const ui = spawn(process.execPath, args, { stdio: 'inherit' });
 
         ui.on('close', code => {
@@ -366,11 +367,10 @@ async function formatOutput(content, format) {
 
   if (argv.headful) {
     try {
-      await page.waitForSelector('input[type=email]');
-
       if (argv.username) {
         logger.debug(`Pre-filling email with ${argv.username}`);
-        await page.evaluate((data) => document.querySelector('input[type=email]').value = data.username, { username: argv.username })
+
+        await page.fill('input[type=email]', argv.username)
       }
 
       await page.waitForResponse('https://signin.aws.amazon.com/saml');

@@ -33,7 +33,7 @@
     "libsaml": "^1.0.0",
     "open": "^8.4.2",
     "ora": "^6.1.2",
-    "playwright": "^1.17.0",
+    "playwright": "^1.31.2",
     "prompts": "^2.4.2",
     "trash": "^8.1.1",
     "yargs": "^17.7.1"
