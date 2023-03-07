@@ -1,6 +1,6 @@
 
 /**
- * Dependencies.
+ * Module dependencies.
  */
 
 

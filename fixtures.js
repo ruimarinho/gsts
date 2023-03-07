@@ -1,6 +1,6 @@
 
 /**
- * Dependencies.
+ * Module dependencies.
  */
 
 import { readFile } from 'node:fs/promises';

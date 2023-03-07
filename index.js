@@ -6,9 +6,7 @@
 
 import { Logger, PLAYWRIGHT_LOG_LEVELS } from './logger.js';
 import { CredentialsManager } from './credentials-manager.js';
-import { Daemonizer } from './daemonizer.js';
 import { RoleNotFoundError } from './errors.js';
-import { homedir }  from 'node:os';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { parse as urlparse } from 'node:url';
@@ -25,8 +23,8 @@ const paths = envpaths('gsts', { suffix: '' });
 // Define all available cli options.
 const cliOptions = {
   'aws-profile': {
-    description: 'AWS profile name for storing credentials',
-    default: 'sts'
+    description: 'Profile name used to read AWS config for (e.g. region)',
+    default: 'default'
   },
   'aws-role-arn': {
     description: 'AWS role ARN to authenticate with'
@@ -35,36 +33,23 @@ const cliOptions = {
     description: `AWS session duration in seconds (defaults to the value provided by the IDP, if set)`,
     type: 'number'
   },
-  'aws-shared-credentials-file': {
-    description: 'AWS shared credentials file',
-    default: join(homedir(), '.aws', 'credentials')
-  },
   'aws-region': {
     description: 'AWS region to send requests to',
-    required: true,
-    default: process.env.AWS_DEFAULT_REGION
+    required: true
   },
   'clean': {
     boolean: false,
     config: false,
     description: 'Start authorization from a clean session state'
   },
-  'daemon': {
-    boolean: false,
-    config: false,
-    description: 'Install daemon service (only on macOS for now)'
+  'cache-dir': {
+    description: 'Where to store gsts cache',
+    default: paths.cache
   },
-  'daemon-out-log-path': {
-    description: `Path for storing the output log of the daemon`,
-    default: '/usr/local/var/log/gsts.stdout.log'
-  },
-  'daemon-error-log-path': {
-    description: `Path for storing the error log of the daemon`,
-    default: '/usr/local/var/log/gsts.stderr.log'
-  },
-  'json': {
-    boolean: false,
-    description: `JSON output (compatible with AWS config's credential_process)`
+  'output': {
+    alias: 'o',
+    description: `Output format`,
+    choices: ['json']
   },
   'force': {
     boolean: false,
@@ -106,6 +91,20 @@ const cliOptions = {
 // Parse command line arguments.
 const argv = yargs(hideBin(process.argv))
   .usage('gsts')
+  .middleware((argv) => {
+    if (!argv.awsRegion && process.env.AWS_DEFAULT_REGION) {
+      argv.awsRegion = argv['aws-region'] = process.env.AWS_DEFAULT_REGION;
+    }
+
+    // Automatically enable json output format if process is not inside an
+    // interactive shell to enable compatibility with third-party tools
+    // like the aws cli.
+    if (argv.output == undefined && !process.stdout.isTTY) {
+      argv.output = 'json';
+    }
+
+    return argv;
+  }, true)
   .env('GSTS')
   .command('console', 'Authenticate via SAML and open Amazon AWS console in the default browser')
   .count('verbose')
@@ -138,37 +137,25 @@ process.on('unhandledRejection', e => {
 });
 
 /**
- * Create instance of Daemonizer with logger.
- */
-
-const configArgs = {};
-
-for (const key in cliOptions) {
-  if (cliOptions[key].config === false) {
-    continue;
-  }
-
-  configArgs[key] = argv[key];
-}
-
-const daemonizer = new Daemonizer(logger, configArgs);
-
-/**
  * Create instance of CredentialsManager with logger.
  */
 
-const credentialsManager = new CredentialsManager(logger);
+const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv.cacheDir);
 
 /**
- * Format output according to the request format.
+ * Format output according to the requested output format.
  */
 
-async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null) {
-  if (format !== 'json') {
+async function formatOutput(content, format) {
+  if (format === undefined) {
     return;
   }
 
-  console.log(await credentialsManager.exportAsJSON(awsSharedCredentialsFile, awsProfile));
+  if (format !== 'json') {
+    throw new Error(`Unsupported output format ${format}`);
+  }
+
+  process.stdout.write(content.toJSON());
 }
 
 /**
@@ -180,10 +167,6 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
     logger.debug('Opening url %s', SAML_URL);
 
     return await open(SAML_URL);
-  }
-
-  if (argv.daemon) {
-    return await daemonizer.install(process.platform);
   }
 
   if (argv.clean) {
@@ -199,17 +182,28 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
   let isAuthenticated = false;
 
   if (!argv.headful) {
-    let session = await credentialsManager.getSessionExpirationFromCredentials(argv.awsSharedCredentialsFile, argv.awsProfile, argv.awsRoleArn);
+    try {
+      let session = await credentialsManager.loadCredentials(argv.awsProfile, argv.awsRoleArn);
 
-    if (!argv.force && session.isValid) {
-      isAuthenticated = true;
+      if (!argv.force) {
+        if (session.isValid()) {
+          logger.info('Session is expected to be valid until %s. Use --force to ignore.', session.expiresAt);
 
-      logger.debug('Login session is valid until %s.', new Date(session.expiresAt));
-      logger.stop('Login is still valid, no need to re-authorize! Use --force to ignore.');
+          isAuthenticated = true;
 
-      formatOutput(argv.awsSharedCredentialsFile, argv.awsProfile, argv.json ? 'json' : null);
+          logger.stop();
 
-      return;
+          formatOutput(session, argv.output);
+
+          return;
+        } else {
+          logger.info('Session has expired on %s', session.expiresAt);
+        }
+      }
+    } catch (e) {
+      if (e.code !== 'ENOENT') {
+        throw e;
+      }
     }
   }
 
@@ -218,7 +212,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
     userDataDir: paths.data,
     logger: {
       isEnabled: () => argv.verbose >= 3,
-      log: (name, severity, message, args) => logger[PLAYWRIGHT_LOG_LEVELS[severity]](`Playwright: ${name} ${message}`, args)
+      log: (name, severity, message, args) => PLAYWRIGHT_LOG_LEVELS[severity](`Playwright: ${name} ${message}`, args)
     }
   };
 
@@ -259,7 +253,6 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
               return;
             }
 
-            console.log(require('util').inspect(availableRoles, { depth: null }));
             roleToAssume = availableRoles[response.arn];
 
             logger.info(`You may skip this step by invoking gsts with --aws-role-arn=${roleToAssume.roleArn}`);
@@ -268,7 +261,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
           }
         }
 
-        await credentialsManager.assumeRoleWithSAML(samlAssertion, argv.awsSharedCredentialsFile, argv.awsProfile, argv.awsRegion, roleToAssume, argv.awsSessionDuration);
+        const session = await credentialsManager.assumeRoleWithSAML(samlAssertion, roleToAssume, argv.awsProfile, argv.awsSessionDuration);
 
         logger.debug(`Initiating request to "${route.request().url()}"`);
         route.continue();
@@ -281,10 +274,9 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
           await context.close();
         }
 
-        logger.debug(`Credentials stored in "${argv.awsSharedCredentialsFile}" under AWS profile "${argv.awsProfile}" with role ARN "${roleToAssume.roleArn}"`);
         logger.succeed('Login successful!');
 
-        formatOutput(argv.awsSharedCredentialsFile, argv.awsProfile, argv.json ? 'json' : null);
+        formatOutput(session, argv.output);
       } catch (e) {
         logger.debug('An error has ocurred while authenticating', e);
 
@@ -364,7 +356,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
   } catch (e) {
     // The request to the AWS console is aborted on successful login for performance reasons,
     // so in this particular case closing the browser instance is actually an expected outcome.
-    if (/browser has disconnected/.test(e.message)) {
+    if (/browser has disconnected/.test(e.message) || /Navigation failed because page was closed/.test(e.message)) {
       return;
     }
 
