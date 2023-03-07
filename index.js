@@ -125,7 +125,7 @@ const SAML_URL = `https://accounts.google.com/o/saml2/initsso?idpid=${argv.idpId
  * detailed logging with timestamps.
  */
 
-const logger = new Logger(argv.verbose, process.stderr.isTTY);
+const logger = new Logger(argv.verbose, process.stdout.isTTY);
 
 /**
  * Always return control to the terminal in case an unhandled rejection occurs.
@@ -204,11 +204,8 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
     if (!argv.force && session.isValid) {
       isAuthenticated = true;
 
-      if (argv.verbose) {
-        logger.debug('Skipping re-authorization as session is valid until %s. Use --force to ignore.', new Date(session.expiresAt));
-      } else {
-        logger.info('Login is still valid, no need to re-authorize!');
-      }
+      logger.debug('Login session is valid until %s.', new Date(session.expiresAt));
+      logger.stop('Login is still valid, no need to re-authorize! Use --force to ignore.');
 
       formatOutput(argv.awsSharedCredentialsFile, argv.awsProfile, argv.json ? 'json' : null);
 
@@ -220,7 +217,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
     headless: !argv.headful,
     userDataDir: paths.data,
     logger: {
-      isEnabled: (name, severity) => argv.verbose,
+      isEnabled: () => argv.verbose >= 3,
       log: (name, severity, message, args) => logger[PLAYWRIGHT_LOG_LEVELS[severity]](`Playwright: ${name} ${message}`, args)
     }
   };
@@ -284,11 +281,8 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
           await context.close();
         }
 
-        if (argv.verbose) {
-          logger.debug(`Login successful${ argv.verbose ? ` and credentials stored in "${argv.awsSharedCredentialsFile}" under AWS profile "${argv.awsProfile}" with role ARN "${roleToAssume.roleArn}"` : '!' }`);
-        } else {
-          logger.succeed('Login successful!');
-        }
+        logger.debug(`Credentials stored in "${argv.awsSharedCredentialsFile}" under AWS profile "${argv.awsProfile}" with role ARN "${roleToAssume.roleArn}"`);
+        logger.succeed('Login successful!');
 
         formatOutput(argv.awsSharedCredentialsFile, argv.awsProfile, argv.json ? 'json' : null);
       } catch (e) {
@@ -374,7 +368,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
       return;
     }
 
-    logger.debug('An error ocurred while browsing to the initsso page', e);
+    logger.debug('Error caught while browsing to the initsso page', e);
     return;
   }
 
@@ -394,13 +388,9 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
         return;
       }
 
-      if (argv.verbose) {
-        logger.debug('An unknown error has ocurred while authenticating in headful mode', e);
-        process.exit(1);
-      } else {
-        logger.error(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
-        process.exit(1);
-      }
+      logger.debug('Error while authenticating in headful mode', e);
+      logger.error(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
+      process.exit(1);
     }
   }
 })();

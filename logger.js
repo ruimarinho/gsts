@@ -36,11 +36,7 @@ export class Logger {
     }
 
     start(...args) {
-      if (!this.isTTY) {
-        return;
-      }
-
-      return this.ora.start(...args);
+       return this.ora.start(...args);
     }
 
     stop(...args) {
@@ -48,7 +44,7 @@ export class Logger {
     }
 
     debug(...args) {
-      if (!this.verbose) {
+      if (this.verbose < 2) {
         return;
       }
 
@@ -56,6 +52,10 @@ export class Logger {
     }
 
     info(...args) {
+      if (this.verbose < 1) {
+        return;
+      }
+
       return this.ora.info(this.format(...args));
     }
 
