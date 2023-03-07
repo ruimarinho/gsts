@@ -3,9 +3,8 @@
  * Module dependencies.
  */
 
-const { parse } = require('querystring');
-const Role = require('./role');
-const Saml = require('libsaml');
+import { Role } from './role.js';
+import Saml from 'libsaml';
 
 // Regex pattern for Role.
 const REGEX_PATTERN_ROLE = /(arn:(aws|aws-us-gov|aws-cn):iam:[^:]*:[0-9]+:role\/([^,]+))/i;
@@ -18,7 +17,7 @@ const REGEX_PATTERN_PRINCIPAL = /(arn:aws:iam:[^:]*:[0-9]+:saml-provider\/[^,]+)
  * STS token.
  */
 
-class Parser {
+export class Parser {
   constructor(logger) {
     this.logger = logger;
   }
@@ -61,9 +60,3 @@ class Parser {
     };
   }
 }
-
-/**
- * Exports
- */
-
-module.exports = Parser;

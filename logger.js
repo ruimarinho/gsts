@@ -3,8 +3,8 @@
  * Module dependencies.
  */
 
-const ora = require('ora');
-const util = require('util');
+import { format } from 'node:util';
+import ora from 'ora';
 
 // Map Playwright log levels to custom logger levels.
 const PLAYWRIGHT_LOG_LEVELS = {
@@ -14,11 +14,13 @@ const PLAYWRIGHT_LOG_LEVELS = {
   warning: 'warn'
 };
 
+export { PLAYWRIGHT_LOG_LEVELS };
+
 /**
  * Logger with support for TTY detection.
  */
 
-class Logger {
+export class Logger {
     constructor(verbose, isTTY) {
       this.isTTY = isTTY;
       this.verbose = verbose;
@@ -30,7 +32,7 @@ class Logger {
         args.unshift(new Date().toISOString())
       }
 
-      return util.format(...args);
+      return format(...args);
     }
 
     start(...args) {
@@ -69,6 +71,3 @@ class Logger {
       return this.ora.succeed(this.format(...args));
     }
 }
-
-module.exports.Logger = Logger;
-module.exports.PLAYWRIGHT_LOG_LEVELS = PLAYWRIGHT_LOG_LEVELS;

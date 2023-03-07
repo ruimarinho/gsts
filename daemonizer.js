@@ -1,13 +1,13 @@
 
 /**
- * Module dependencies.
+ * Dependencies.
  */
 
-const childProcess = require('child_process');
-const fs = require('fs').promises;
-const homedir = require('os').homedir();
-const path = require('path');
-const plist = require('plist');
+import { execFile } from 'node:child_process'
+import { homedir }  from 'node:os';
+import { join } from 'path'
+import { writeFile } from 'node:fs/promises';
+import plist from 'plist'
 
 // Project namespace to be used for plist generation.
 const PROJECT_NAMESPACE = 'io.github.ruimarinho.gsts';
@@ -16,7 +16,7 @@ const PROJECT_NAMESPACE = 'io.github.ruimarinho.gsts';
  * Create daemon to periodically refresh credentials.
  */
 
-class Daemonizer {
+export class Daemonizer {
   constructor(logger, args) {
     this.args = args;
     this.logger = logger;
@@ -68,11 +68,11 @@ class Daemonizer {
 
   async installMacOS() {
     // LaunchAgents plist path.
-    const plistPath = path.join(homedir, 'Library', 'LaunchAgents', `${PROJECT_NAMESPACE}.plist`);
+    const plistPath = join(homedir(), 'Library', 'LaunchAgents', `${PROJECT_NAMESPACE}.plist`);
 
     this.logger.debug('Unloading potentially existing launch agent at %s', plistPath);
 
-    await childProcess.execFile('launchctl', ['unload', plistPath], (error, stdout, stderr) => {
+    await execFile('launchctl', ['unload', plistPath], (error, stdout, stderr) => {
       if (!error) {
         return;
       }
@@ -92,11 +92,11 @@ class Daemonizer {
 
     this.logger.debug('Generated launch agent plist file %s', plist);
 
-    await fs.writeFile(plistPath, plist);
+    await writeFile(plistPath, plist);
 
     this.logger.debug('Successfully wrote the launch agent plist to %s', plistPath);
 
-    await childProcess.execFile('launchctl', ['load', plistPath], (error, stdout, stderr) => {
+    await execFile('launchctl', ['load', plistPath], (error, stdout, stderr) => {
       if (error) {
         this.logger.error(error);
         return;
@@ -114,9 +114,3 @@ class Daemonizer {
     });
   }
 }
-
-/**
- * Exports.
- */
-
-module.exports = Daemonizer;

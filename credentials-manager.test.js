@@ -4,24 +4,38 @@
  */
 
 
-require('aws-sdk-client-mock-jest');
 
-const { Logger } = require('./logger');
-const { STSClient, AssumeRoleWithSAMLCommand } = require('@aws-sdk/client-sts');
-const { mockClient } = require('aws-sdk-client-mock');
-const CredentialsManager = require('./credentials-manager');
-const Role = require('./role');
-const errors = require('./errors');
-const fixtures = require('./fixtures');
-const fs = require('fs').promises;
-const ini = require('ini');
-const os = require('os');
-const path = require('path');
-const stsMock = mockClient(STSClient);
+import 'aws-sdk-client-mock-jest';
+import { STSClient, AssumeRoleWithSAMLCommand } from '@aws-sdk/client-sts';
+import { CredentialsManager } from './credentials-manager.js';
+import { RoleNotFoundError } from './errors.js';
+import { Role } from './role';
+import { mockClient } from 'aws-sdk-client-mock';
+import { mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
+import { EOL, tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { jest } from '@jest/globals';
+import * as fixtures from './fixtures.js';
+import ini from 'ini';
 
-jest.mock('./logger');
+jest.unstable_mockModule('./logger.js', async () => ({
+  Logger: function Logger() {
+    return {
+      format: jest.fn(),
+      start: jest.fn(),
+      stop: jest.fn(),
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      succeed: jest.fn()
+    }
+  }
+}));
 
+const { Logger } = (await import('./logger.js'));
 const logger = new Logger();
+const stsMock = mockClient(STSClient);
 
 beforeEach(() => {
   stsMock.reset();
@@ -86,7 +100,7 @@ describe('prepareRoleWithSAML', () => {
       error = e;
     }
 
-    const expected = new errors.RoleNotFoundError([
+    const expected = new RoleNotFoundError([
       new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite'),
       new Role('Admin', 'arn:aws:iam::987654321:role/Admin', 'arn:aws:iam::987654321:saml-provider/GSuite'),
       new Role('Foobiz', 'arn:aws:iam::987654321:role/Foobiz', 'arn:aws:iam::987654321:saml-provider/GSuite')
@@ -114,11 +128,11 @@ describe('assumeRoleWithSAML', () => {
 
     const awsProfile = 'test';
     const awsRegion = 'us-east-1';
-    const awsSharedCredentialsFile = path.join(os.tmpdir(), 'aws');
+    const awsSharedCredentialsFile = join(tmpdir(), 'aws');
     const role = new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite');
     const credentialsManager = new CredentialsManager(logger);
     await credentialsManager.assumeRoleWithSAML('foobar', awsSharedCredentialsFile, awsProfile, awsRegion, role);
-    const savedCredentials = await fs.readFile(awsSharedCredentialsFile, 'utf-8');
+    const savedCredentials = await readFile(awsSharedCredentialsFile, 'utf-8');
 
     expect(stsMock).toHaveReceivedCommandWith(AssumeRoleWithSAMLCommand, {
       PrincipalArn: 'arn:aws:iam::123456789:saml-provider/GSuite',
@@ -126,7 +140,7 @@ describe('assumeRoleWithSAML', () => {
       SAMLAssertion: 'foobar'
     });
 
-    expect(savedCredentials).toBe(`[${awsProfile}]${os.EOL}aws_access_key_id=${accessKeyId}${os.EOL}aws_role_arn=${role.roleArn}${os.EOL}aws_secret_access_key=${secretAccessKey}${os.EOL}aws_session_expiration=${sessionExpiration.toISOString()}${os.EOL}aws_session_token=${sessionToken}${os.EOL}`);
+    expect(savedCredentials).toBe(`[${awsProfile}]${EOL}aws_access_key_id=${accessKeyId}${EOL}aws_role_arn=${role.roleArn}${EOL}aws_secret_access_key=${secretAccessKey}${EOL}aws_session_expiration=${sessionExpiration.toISOString()}${EOL}aws_session_token=${sessionToken}${EOL}`);
   });
 
   it('parses IAM role max session duration if custom session duration is defined', async () => {
@@ -151,7 +165,7 @@ describe('assumeRoleWithSAML', () => {
 
     const awsProfile = 'test';
     const awsRegion = 'us-east-1';
-    const awsSharedCredentialsFile = path.join(os.tmpdir(), 'aws');
+    const awsSharedCredentialsFile = join(tmpdir(), 'aws');
     const role = new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite');
     const credentialsManager = new CredentialsManager(logger);
     await credentialsManager.assumeRoleWithSAML('foobar', awsSharedCredentialsFile, awsProfile, awsRegion, role, 20000);
@@ -171,7 +185,7 @@ describe('assumeRoleWithSAML', () => {
     const sessionExpiration = new Date('2020-04-19T10:32:19.000Z');
     const awsProfile = 'test';
     const awsRegion = 'us-east-1';
-    const awsSharedCredentialsFile = path.join(os.tmpdir(), 'aws');
+    const awsSharedCredentialsFile = join(tmpdir(), 'aws');
     const role = new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite', 10000);
 
     stsMock
@@ -217,7 +231,7 @@ describe('assumeRoleWithSAML', () => {
 
     const awsProfile = 'test';
     const awsRegion = 'us-east-1';
-    const awsSharedCredentialsFile = path.join(os.tmpdir(), 'aws');
+    const awsSharedCredentialsFile = join(tmpdir(), 'aws');
     const role = new Role('Foobar', 'arn:aws:iam::123456789:role/Foobar', 'arn:aws:iam::123456789:saml-provider/GSuite', 10000);
     const credentialsManager = new CredentialsManager(logger);
     await credentialsManager.assumeRoleWithSAML('foobar', awsSharedCredentialsFile, awsProfile, awsRegion, role, 60000);
@@ -232,11 +246,11 @@ describe('assumeRoleWithSAML', () => {
 
   describe('getSessionExpirationFromCredentials', () => {
     it('should return false if credentials are not found', async () => {
-      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsDirectory = await mkdtemp(join(tmpdir(), 'gsts-'));
       const awsProfile = 'test';
       const awsRegion = 'us-east-1';
       const awsRoleArn = 'arn:aws:iam::123456789:role/Foobar';
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const credentialsManager = new CredentialsManager(logger);
       const { isValid, expiresAt } = await credentialsManager.getSessionExpirationFromCredentials(awsSharedCredentialsFile, awsProfile, awsRegion, awsRoleArn);
 
@@ -245,10 +259,10 @@ describe('assumeRoleWithSAML', () => {
     });
 
     it('should return false if credentials are for a different role ARN', async () => {
-      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsDirectory = await mkdtemp(join(tmpdir(), 'gsts-'));
       const awsProfile = 'test';
       const awsRoleArn = 'arn:aws:iam::987654321:role/Foobar';
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const credentialsManager = new CredentialsManager(logger);
 
       await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
@@ -266,10 +280,10 @@ describe('assumeRoleWithSAML', () => {
     });
 
     it('should return false if credentials session expiration is not found', async () => {
-      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsDirectory = await mkdtemp(join(tmpdir(), 'gsts-'));
       const awsProfile = 'test';
       const awsRoleArn = 'arn:aws:iam::987654321:role/Foobar';
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const credentialsManager = new CredentialsManager(logger);
 
       await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
@@ -280,11 +294,11 @@ describe('assumeRoleWithSAML', () => {
         sessionToken: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB'
       });
 
-      const savedCredentials = await fs.readFile(awsSharedCredentialsFile, 'utf-8');
+      const savedCredentials = await readFile(awsSharedCredentialsFile, 'utf-8');
       const parsedCredentials = ini.parse(savedCredentials);
       delete parsedCredentials[awsProfile].aws_session_expiration;
 
-      await fs.writeFile(awsSharedCredentialsFile, ini.encode(parsedCredentials))
+      await writeFile(awsSharedCredentialsFile, ini.encode(parsedCredentials))
 
       const { isValid, expiresAt } = await credentialsManager.getSessionExpirationFromCredentials(awsSharedCredentialsFile, awsProfile, awsRoleArn);
 
@@ -293,10 +307,10 @@ describe('assumeRoleWithSAML', () => {
     });
 
     it('should return false if credentials session expiration has passed', async () => {
-      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsDirectory = await mkdtemp(join(tmpdir(), 'gsts-'));
       const awsProfile = 'test';
       const awsRoleArn = 'arn:aws:iam::987654321:role/Foobar';
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const awsExpiresAt = new Date();
       const credentialsManager = new CredentialsManager(logger);
 
@@ -315,10 +329,10 @@ describe('assumeRoleWithSAML', () => {
     });
 
     it('should return false if credentials session expiration is inside valid window', async () => {
-      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsDirectory = await mkdtemp(join(tmpdir(), 'gsts-'));
       const awsProfile = 'test';
       const awsRoleArn = 'arn:aws:iam::987654321:role/Foobar';
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const credentialsManager = new CredentialsManager(logger);
 
       await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
@@ -336,10 +350,10 @@ describe('assumeRoleWithSAML', () => {
     });
 
     it('should return true if credentials are found for unspecified custom role ARN', async () => {
-      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsDirectory = await mkdtemp(join(tmpdir(), 'gsts-'));
       const awsProfile = 'test';
       const awsRoleArn = 'arn:aws:iam::987654321:role/Foobar';
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const credentialsManager = new CredentialsManager(logger);
       const sessionExpiresAt = new Date(new Date().getTime() + 100000000);
 
@@ -360,9 +374,9 @@ describe('assumeRoleWithSAML', () => {
 
   describe('loadCredentials', () => {
     it('should not throw an error if credentials file does not exist', async () => {
-      const awsDirectory = path.join(os.tmpdir(), Math.random().toString(36).substring(4));
+      const awsDirectory = join(tmpdir(), Math.random().toString(36).substring(4));
       const awsProfile = 'test';
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const credentialsManager = new CredentialsManager(logger);
       const credentials = await credentialsManager.loadCredentials(awsSharedCredentialsFile, awsProfile);
 
@@ -370,9 +384,9 @@ describe('assumeRoleWithSAML', () => {
     });
 
     it('should not throw an error if credentials profile does not exist', async () => {
-      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsDirectory = await mkdtemp(join(tmpdir(), 'gsts-'));
       const awsProfile = 'test';
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const credentialsManager = new CredentialsManager(logger);
 
       await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
@@ -389,10 +403,10 @@ describe('assumeRoleWithSAML', () => {
     });
 
     it('should return the full config if credentials profile is not set', async () => {
-      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsDirectory = await mkdtemp(join(tmpdir(), 'gsts-'));
       const awsProfile = 'test';
       const awsExpiresAt = new Date();
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const credentialsManager = new CredentialsManager(logger);
 
       await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {
@@ -419,9 +433,9 @@ describe('assumeRoleWithSAML', () => {
 
   describe('saveCredentials', () => {
     it('creates directory if it does not exist', async () => {
-      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsDirectory = await mkdtemp(join(tmpdir(), 'gsts-'));
       const awsProfile = 'test';
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const accessKeyId = 'AAAAAABBBBBBCCCCCCDDDDDD';
       const roleArn = 'arn:aws:iam::987654321:role/Foobar';
       const secretAccessKey = '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4';
@@ -431,14 +445,14 @@ describe('assumeRoleWithSAML', () => {
 
       await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, { accessKeyId, roleArn, secretAccessKey, sessionExpiration, sessionToken });
 
-      await fs.stat(awsSharedCredentialsFile);
+      await stat(awsSharedCredentialsFile);
     });
   });
 
   describe('exportAsJSON', () => {
     it('should return a basic json structure when credentials are missing', async () => {
-      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsDirectory = await mkdtemp(join(tmpdir(), 'gsts-'));
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const credentialsManager = new CredentialsManager(logger);
       const credentials = await credentialsManager.exportAsJSON(awsSharedCredentialsFile);
 
@@ -448,10 +462,10 @@ describe('assumeRoleWithSAML', () => {
     });
 
     it('should return credentials in json format', async () => {
-      const awsDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'gsts-'));
+      const awsDirectory = await mkdtemp(join(tmpdir(), 'gsts-'));
       const awsProfile = 'test';
       const awsExpiresAt = new Date();
-      const awsSharedCredentialsFile = path.join(awsDirectory, 'credentials');
+      const awsSharedCredentialsFile = join(awsDirectory, 'credentials');
       const credentialsManager = new CredentialsManager(logger);
 
       await credentialsManager.saveCredentials(awsSharedCredentialsFile, awsProfile, {

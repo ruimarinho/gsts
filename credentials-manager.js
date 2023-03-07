@@ -3,20 +3,12 @@
  * Module dependencies.
  */
 
-const { dirname } = require('path');
-const Parser = require('./parser');
-const { STSClient, AssumeRoleWithSAMLCommand } = require('@aws-sdk/client-sts');
-const errors = require('./errors');
-const ffs = require('fs');
-const ini = require('ini');
-const util = require('util');
-const fs = {
-  exists: util.promisify(ffs.exists),
-  mkdir: util.promisify(ffs.mkdir),
-  readFile: util.promisify(ffs.readFile),
-  stat: util.promisify(ffs.stat),
-  writeFile: util.promisify(ffs.writeFile),
-}
+import { Parser } from './parser.js';
+import { STSClient, AssumeRoleWithSAMLCommand } from '@aws-sdk/client-sts';
+import { RoleNotFoundError } from './errors.js';
+import { dirname } from 'node:path';
+import { mkdir, stat, readFile, writeFile } from 'node:fs/promises';
+import ini from 'ini';
 
 // Delta (in seconds) between exact expiration date and current date to avoid requests
 // on the same second to fail.
@@ -32,15 +24,15 @@ const REGEX_PATTERN_DURATION_SECONDS = /value less than or equal to ([0-9]+)/
 
 async function mkdirP(path, mode) {
   try {
-    await fs.mkdir(path, mode);
+    await mkdir(path, mode);
   } catch (e) {
     if (e.code === 'EPERM') {
       throw e;
     }
 
     if (e.code === 'ENOENT') {
-      if (path.dirname(path) === path) {
-        // This replicates the exception of `fs.mkdir` with the native
+      if (dirname(path) === path) {
+        // This replicates the exception of `mkdir` with the native
         // `recusive` option when ran on an invalid drive under Windows.
         // From https://github.com/jprichardson/node-fs-extra.
         const error = new Error(`operation not permitted, mkdir '${path}'`);
@@ -55,11 +47,11 @@ async function mkdirP(path, mode) {
         throw e;
       }
 
-      await mkdirP(path.dirname(path));
+      await mkdirP(dirname(path));
     }
 
     try {
-      const stats = await fs.stat(path);
+      const stats = await stat(path);
       if (!stats.isDirectory()) {
         // This error is never exposed to the user
         // it is caught below, and the original error is thrown
@@ -78,7 +70,7 @@ async function mkdirP(path, mode) {
  * STS token.
  */
 
-class CredentialsManager {
+export class CredentialsManager {
   constructor(logger) {
     this.logger = logger;
     this.sessionExpirationDelta = SESSION_EXPIRATION_DELTA;
@@ -112,7 +104,7 @@ class CredentialsManager {
     const customRole = roles.find(role => role.roleArn === customRoleArn);
 
     if (!customRole) {
-      throw new errors.RoleNotFoundError(roles);
+      throw new RoleNotFoundError(roles);
     }
 
     this.logger.debug('Found custom role ARN "%s" with principal ARN "%s"', customRole.roleArn, customRole.principalArn);
@@ -189,7 +181,7 @@ class CredentialsManager {
     let credentials;
 
     try {
-      credentials = await fs.readFile(path, 'utf-8')
+      credentials = await readFile(path, 'utf-8')
     } catch (e) {
       if (e.code === 'ENOENT') {
         this.logger.debug('Credentials file does not exist at %s', path)
@@ -228,7 +220,7 @@ class CredentialsManager {
     credentials[profile].aws_session_token = sessionToken;
 
     await mkdirP(dirname(path));
-    await fs.writeFile(path, ini.encode(credentials));
+    await writeFile(path, ini.encode(credentials));
 
     this.logger.debug('The credentials have been stored in "%s" under AWS profile "%s" with contents %o', path, profile, credentials);
   }
@@ -296,9 +288,3 @@ class CredentialsManager {
     return { isValid: false, expiresAt: new Date(credentials.aws_session_expiration).toISOString() };
   }
 }
-
-/**
- * Exports.
- */
-
-module.exports = CredentialsManager;

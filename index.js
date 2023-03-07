@@ -4,19 +4,22 @@
  * Module dependencies.
  */
 
-const { Logger, PLAYWRIGHT_LOG_LEVELS } = require('./logger');
-const playwright = require('playwright');
-const CredentialsManager = require('./credentials-manager');
-const Daemonizer = require('./daemonizer');
-const childProcess = require('child_process');
-const errors = require('./errors');
-const homedir = require('os').homedir();
-const open = require('open');
-const path = require('path');
-const paths = require('env-paths')('gsts', { suffix: '' });
-const prompts = require('prompts');
-const trash = require('trash');
-const url = require('url');
+import { Logger, PLAYWRIGHT_LOG_LEVELS } from './logger.js';
+import { CredentialsManager } from './credentials-manager.js';
+import { Daemonizer } from './daemonizer.js';
+import { RoleNotFoundError } from './errors.js';
+import { homedir }  from 'node:os';
+import { spawn } from 'node:child_process';
+import { join } from 'node:path';
+import { parse as urlparse } from 'node:url';
+import yargs from 'yargs';
+import playwright from 'playwright';
+import open from 'open';
+import envpaths from 'env-paths';
+import prompts from 'prompts';
+import trash from 'trash';
+
+const paths = envpaths('gsts', { suffix: '' });
 
 // Define all available cli options.
 const cliOptions = {
@@ -33,7 +36,7 @@ const cliOptions = {
   },
   'aws-shared-credentials-file': {
     description: 'AWS shared credentials file',
-    default: path.join(homedir, '.aws', 'credentials')
+    default: join(homedir(), '.aws', 'credentials')
   },
   'aws-region': {
     description: 'AWS region to send requests to',
@@ -103,7 +106,7 @@ const cliOptions = {
 }
 
 // Parse command line arguments.
-const argv = require('yargs')
+const argv = yargs(process.argv.slice(2))
   .usage('gsts')
   .env()
   .command('console', 'Authenticate via SAML and open Amazon AWS console in the default browser')
@@ -228,7 +231,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
     options.executablePath = argv.engineExecutablePath;
   }
 
-  const context = await playwright[argv.engine].launchPersistentContext(path.join(paths.data, argv.engine), options);
+  const context = await playwright[argv.engine].launchPersistentContext(join(paths.data, argv.engine), options);
   const page = await context.newPage();
   page.setDefaultTimeout(0);
 
@@ -293,7 +296,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
       } catch (e) {
         logger.debug('An error has ocurred while authenticating', e);
 
-        if (e instanceof errors.RoleNotFoundError) {
+        if (e instanceof RoleNotFoundError) {
           logger.error(`Role ARN "${argv.awsRoleArn}" not found in the list of available roles ${JSON.stringify(e.roles)}`);
           route.abort();
           return;
@@ -340,7 +343,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
 
     // The request to the AWS console is aborted on successful login for performance reasons,
     // so in this particular case it's actually an expected outcome.
-    const parsedURL = url.parse(request.url());
+    const parsedURL = urlparse(request.url());
     if (parsedURL.host.endsWith('console.aws.amazon.com') && parsedURL.pathname === '/console/home') {
       logger.debug(`Request to "${request.url()}" matches AWS console which means authentication was successful`);
 
@@ -357,7 +360,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
         logger.warn('User is not authenticated, spawning headful instance');
 
         const args = [__filename, '--headful', ...process.argv.slice(2)];
-        const ui = childProcess.spawn(process.execPath, args, { stdio: 'inherit' });
+        const ui = spawn(process.execPath, args, { stdio: 'inherit' });
 
         ui.on('close', code => {
           logger.debug(`Headful instance has exited with code ${code}`);
