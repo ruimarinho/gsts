@@ -12,6 +12,7 @@ import { homedir }  from 'node:os';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { parse as urlparse } from 'node:url';
+import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
 import playwright from 'playwright';
 import open from 'open';
@@ -106,7 +107,7 @@ const cliOptions = {
 }
 
 // Parse command line arguments.
-const argv = yargs(process.argv.slice(2))
+const argv = yargs(hideBin(process.argv))
   .usage('gsts')
   .env()
   .command('console', 'Authenticate via SAML and open Amazon AWS console in the default browser')
