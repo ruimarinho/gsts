@@ -77,8 +77,7 @@ const cliOptions = {
     hidden: true
   },
   'idp-id': {
-    alias: 'google-idp-id',
-    description: 'Google Identity Provider ID (IDP ID)',
+    description: 'Identity Provider ID (IdP ID)',
     required: true
   },
   'engine': {
@@ -92,13 +91,11 @@ const cliOptions = {
     required: false
   },
   'sp-id': {
-    alias: 'google-sp-id',
-    description: 'Google Service Provider ID (SP ID)',
+    description: 'Service Provider ID (SP ID)',
     required: true
   },
   'username': {
-    alias: 'google-username',
-    description: 'Google username to auto pre-fill during login'
+    description: 'Username to auto pre-fill during login'
   },
   'verbose': {
     config: false,
@@ -121,7 +118,7 @@ const argv = yargs(hideBin(process.argv))
  * The SAML URL to be used for authentication.
  */
 
-const SAML_URL = `https://accounts.google.com/o/saml2/initsso?idpid=${argv.googleIdpId}&spid=${argv.googleSpId}&forceauthn=false`;
+const SAML_URL = `https://accounts.google.com/o/saml2/initsso?idpid=${argv.idpId}&spid=${argv.spId}&forceauthn=false`;
 
 /**
  * Custom logger instance to support `-v` or `--verbose` output and non-TTY
@@ -354,7 +351,7 @@ async function formatOutput(awsSharedCredentialsFile, awsProfile, format = null)
   });
 
   try {
-    const ssoPage = await page.goto(`https://accounts.google.com/o/saml2/initsso?idpid=${argv.googleIdpId}&spid=${argv.googleSpId}&forceauthn=false`)
+    const ssoPage = await page.goto(SAML_URL)
 
     if (/ServiceLogin/.test(ssoPage.url())) {
       if (!isAuthenticated && !argv.headful) {
