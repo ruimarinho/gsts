@@ -109,7 +109,7 @@ const cliOptions = {
 // Parse command line arguments.
 const argv = yargs(hideBin(process.argv))
   .usage('gsts')
-  .env()
+  .env('GSTS')
   .command('console', 'Authenticate via SAML and open Amazon AWS console in the default browser')
   .count('verbose')
   .alias('v', 'verbose')
