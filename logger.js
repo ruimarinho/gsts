@@ -36,10 +36,18 @@ export class Logger {
     }
 
     start(...args) {
-       return this.ora.start(...args);
+      if (!this.isTTY) {
+        return;
+      }
+
+      return this.ora.start(...args);
     }
 
     stop(...args) {
+      if (!this.isTTY) {
+        return;
+      }
+
       return this.ora.stop(...args);
     }
 
