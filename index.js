@@ -11,40 +11,46 @@ import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { fileURLToPath, parse as urlparse } from 'node:url';
 import { hideBin } from 'yargs/helpers';
-import yargs from 'yargs';
-import open from 'open';
+import config from '@aws-sdk/shared-ini-file-loader';
 import envpaths from 'env-paths';
+import open from 'open';
 import playwright from 'playwright';
 import prompts from 'prompts';
 import trash from 'trash';
+import yargs from 'yargs';
 
 const paths = envpaths('gsts', { suffix: '' });
 
 // Define all available cli options.
-const cliOptions = {
+const cliParameters = {
   'aws-profile': {
     description: 'Profile name used to read AWS config for (e.g. region)',
-    default: 'default'
+    required: true
   },
   'aws-role-arn': {
-    description: 'AWS role ARN to authenticate with'
+    description: 'AWS role ARN to authenticate with',
+    awsConfigKey: 'gsts.role_arn'
   },
   'aws-session-duration': {
     description: `AWS session duration in seconds (defaults to the value provided by the IDP, if set)`,
-    type: 'number'
+    type: 'number',
+    awsConfigKey: 'duration_seconds'
   },
   'aws-region': {
     description: 'AWS region to send requests to',
-    required: true
+    required: true,
+    awsConfigKey: 'region',
   },
   'clean': {
-    boolean: false,
+    type: 'boolean',
     config: false,
-    description: 'Start authorization from a clean session state'
+    description: 'Start authorization from a clean session state',
+    awsConfigKey: 'gsts.clean'
   },
   'cache-dir': {
     description: 'Where to store gsts cache',
-    default: paths.cache
+    default: paths.cache,
+    awsConfigKey: 'gsts.cache_dir'
   },
   'output': {
     alias: 'o',
@@ -52,82 +58,53 @@ const cliOptions = {
     choices: ['json']
   },
   'force': {
-    boolean: false,
-    description: 'Force re-authorization even with valid session'
+    type: 'boolean',
+    default: false,
+    description: 'Force re-authorization even with valid session',
+    awsConfigKey: 'gsts.force',
   },
   'headful': {
-    boolean: false,
+    type: 'boolean',
     config: false,
     description: 'headful',
     hidden: true
   },
   'idp-id': {
     description: 'Identity Provider ID (IdP ID)',
-    required: true
+    required: true,
+    awsConfigKey: 'gsts.idp_id'
   },
   'playwright-engine': {
     description: 'Set custom browser engine',
     choices: ['chromium', 'firefox', 'webkit'],
     default: 'chromium',
-    required: false
+    awsConfigKey: 'gsts.playwright_engine'
   },
   'playwright-engine-executable-path': {
     description: 'Set custom executable path for browser engine',
-    required: false
+    awsConfigKey: 'gsts.playwright_engine_executable_path'
   },
   'playwright-engine-channel': {
-    choices: ['chrome', 'chrome-beta', 'msedge-beta', 'msedge-dev']
+    choices: ['chrome', 'chrome-beta', 'msedge-beta', 'msedge-dev'],
+    awsConfigKey: 'gsts.playwright_engine_channel'
   },
   'sp-id': {
     description: 'Service Provider ID (SP ID)',
-    required: true
+    type: 'string',
+    required: true,
+    awsConfigKey: 'gsts.sp_id'
   },
   'username': {
-    description: 'Username to auto pre-fill during login'
+    description: 'Username to auto pre-fill during login',
+    awsConfigKey: 'gsts.username'
   },
   'verbose': {
-    config: false,
-    description: 'Log verbose output'
+    description: 'Log verbose output',
+    awsConfigKey: 'gsts.verbose',
+    type: 'count',
+    alias: 'v'
   }
 }
-
-// Parse command line arguments.
-const argv = yargs(hideBin(process.argv))
-  .usage('gsts')
-  .middleware((argv) => {
-    if (!argv.awsRegion && process.env.AWS_DEFAULT_REGION) {
-      argv.awsRegion = argv['aws-region'] = process.env.AWS_DEFAULT_REGION;
-    }
-
-    // Automatically enable json output format if process is not inside an
-    // interactive shell to enable compatibility with third-party tools
-    // like the aws cli.
-    if (argv.output == undefined && !process.stdout.isTTY) {
-      argv.output = 'json';
-    }
-
-    return argv;
-  }, true)
-  .env('GSTS')
-  .command('console', 'Authenticate via SAML and open Amazon AWS console in the default browser')
-  .count('verbose')
-  .alias('v', 'verbose')
-  .options(cliOptions)
-  .strictCommands()
-  .argv;
-
-/**
- * The SAML URL to be used for authentication.
- */
-
-const SAML_URL = `https://accounts.google.com/o/saml2/initsso?idpid=${argv.idpId}&spid=${argv.spId}&forceauthn=false`;
-
-/**
- * Custom logger instance to support `-v` or `--verbose` output and non-TTY
- * detailed logging with timestamps.
- */
-
-const logger = new Logger(argv.verbose, process.stdout.isTTY);
 
 /**
  * Always return control to the terminal in case an unhandled rejection occurs.
@@ -138,6 +115,104 @@ process.on('unhandledRejection', e => {
   console.error(e);
   process.exit(1);
 });
+
+// Parse command line arguments.
+const argv = await yargs(hideBin(process.argv))
+  .usage('gsts')
+  .middleware(async (argv) => {
+    // At this stage, `gsts` supported environment variables have already been populated,
+    // so testing for undefined `argv` properties means both a command line parameter
+    // as well as an environment variable value are not present, so we can safely proceed
+    // to the `aws` cli configuration settings parsing in the same order as it does.
+
+    // Load the AWS config file taking into consideration the `$AWS_CONFIG_FILE` environment
+    // variable as supported by the `aws` cli.
+    const awsConfig = await config.loadSharedConfigFiles();
+
+
+    // If defined, `$AWS_REGION` overrides the values in the environment variable
+    // `$AWS_DEFAULT_REGION` and the profile setting region. You can override `$AWS_REGION`
+    // by using the `--aws-region` command line parameter.
+    if (!argv.awsRegion && process.env.AWS_REGION) {
+      argv.awsRegion = argv['aws-region'] = process.env.AWS_REGION;
+    }
+
+    // If defined, `$AWS_DEFAULT_REGION` overrides the value for the profile setting region.
+    // You can override `$AWS_DEFAULT_REGION` by using the `--aws-region` command line parameter.
+    if (!argv.awsRegion && process.env.AWS_DEFAULT_REGION) {
+      argv.awsRegion = argv['aws-region'] = process.env.AWS_DEFAULT_REGION;
+    }
+
+    // If defined, `$AWS_PROFILE` overrides the behavior of using the profile named [default] in
+    // the `aws` cli configuration file. You can override this environment variable by using the
+    // `--aws-profile` command line parameter.
+    if (!argv.awsProfile && process.env.AWS_PROFILE) {
+      argv.awsProfile = argv['aws-profile'] = process.env.AWS_PROFILE;
+    } else {
+      argv.awsProfile = argv['aws-profile'] = 'default'
+    }
+
+
+    for (let parameterKey in cliParameters) {
+      // Test if this specific command line parameter is supported via the `aws` cli profile configuration.
+      if (!cliParameters[parameterKey]?.awsConfigKey) {
+        continue;
+      }
+
+      // If supported and this specific command line parameter has not been set previously by `aws` cli supported
+      // environement variables, proceed with parsing values from the `aws` cli configuration file.
+      // Some `gsts` parameters offer default values, so we need to allow customizing those as well.
+      if (argv[parameterKey] === undefined || argv[parameterKey] === cliParameters[parameterKey].default) {
+        // Read value from `aws` cli profile configuration settings.
+        const value = awsConfig.configFile[argv.awsProfile]?.[cliParameters[parameterKey].awsConfigKey];
+        // Check expected value type.
+        const type = cliParameters[parameterKey]?.type;
+
+        // Coerce into expected value type.
+        switch (value) {
+          case 'number':
+            argv[parameterKey] = Number(value);
+            break;
+          case 'boolean':
+            argv[parameterKey] = Boolean(value);
+            break;
+          default:
+            argv[parameterKey] = value;
+            break;
+        }
+
+        // Normalize into yargs structure.
+        argv[parameterKey] = argv[camalize(parameterKey)];
+      }
+    }
+
+    // Automatically enable json output format if `gsts` is not inside an
+    // interactive shell to enable compatibility with third-party tools
+    // like the `aws` cli.
+    if (argv.output == undefined && !process.stdout.isTTY) {
+      argv.output = 'json';
+    }
+
+    return argv;
+  }, true)
+  .env('GSTS')
+  .command('console', 'Authenticate via SAML and open Amazon AWS console in the default browser')
+  .options(cliParameters)
+  .strictCommands()
+  .argv;
+
+/**
+ * Custom logger instance to support `-v` or `--verbose` output and non-TTY
+ * detailed logging with timestamps.
+ */
+
+const logger = new Logger(argv.verbose, process.stdout.isTTY);
+
+/**
+ * The SAML URL to be used for authentication.
+ */
+
+const SAML_URL = `https://accounts.google.com/o/saml2/initsso?idpid=${argv.idpId}&spid=${argv.spId}&forceauthn=false`;
 
 /**
  * Create instance of CredentialsManager with logger.
