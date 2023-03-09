@@ -209,7 +209,7 @@ const argv = await yargs(hideBin(process.argv))
  * detailed logging with timestamps.
  */
 
-const logger = new Logger(argv.verbose, process.stdout.isTTY);
+const logger = new Logger(argv.verbose, process.stdout.isTTY, process.stderr);
 
 /**
  * The SAML URL to be used for authentication.
