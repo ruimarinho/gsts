@@ -416,7 +416,7 @@ async function formatOutput(content, format) {
   });
 
   try {
-    const ssoPage = await page.goto(SAML_URL)
+    const ssoPage = await page.goto(SAML_URL, { waitUntil: 'load' })
 
     if (/ServiceLogin/.test(ssoPage.url())) {
       if (!isAuthenticated && !argv.headful) {
