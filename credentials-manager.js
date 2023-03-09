@@ -154,7 +154,7 @@ export class CredentialsManager {
    */
 
   async loadCredentials(profile, roleArn) {
-    this.logger.debug('Loading credentials from "%s" for profile "%s"', this.credentialsFile, profile);
+    this.logger.debug('Loading credentials from "%s" for profile "%s".', this.credentialsFile, profile);
 
     let credentials;
 
@@ -162,14 +162,14 @@ export class CredentialsManager {
       credentials = ini.parse(await readFile(this.credentialsFile, 'utf-8'));
     } catch (e) {
       if (e.code === 'ENOENT') {
-        this.logger.debug('Credentials file does not exist at %s', this.credentialsFile)
+        this.logger.debug('Credentials file does not exist at %s.', this.credentialsFile)
       }
 
       throw e;
     }
 
     if (!credentials[profile]) {
-      throw new Error(`Credentials for profile "${profile}" are not available`);
+      throw new Error(`Credentials for profile "${profile}" are not available.`);
     }
 
     const session = Session.fromIni(credentials[profile]);

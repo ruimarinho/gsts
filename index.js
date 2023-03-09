@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { fileURLToPath, parse as urlparse } from 'node:url';
 import { hideBin } from 'yargs/helpers';
+import { camalize } from './utils.js'
 import config from '@aws-sdk/shared-ini-file-loader';
 import envpaths from 'env-paths';
 import open from 'open';
@@ -265,7 +266,7 @@ async function formatOutput(content, format) {
 
       if (!argv.force) {
         if (session.isValid()) {
-          logger.info('Session is expected to be valid until %s. Use --force to ignore.', session.expiresAt);
+          logger.info('Session is valid until %s. Use --force to ignore.', session.expiresAt);
 
           isAuthenticated = true;
 
@@ -395,9 +396,9 @@ async function formatOutput(content, format) {
     // Requests tagged with this specific error were made by gsts and should result
     // in a program termination.
     if (request.failure().errorText === 'net::ERR_BLOCKED_BY_CLIENT') {
-      logger.debug(`Request to ${request.url()} has failed due to client request block`);
+      logger.debug(`Request to "${request.url()}" has failed due to client request block`);
       await context.close();
-      logger.debug(`Closed context of ${request.url()}`);
+      logger.debug(`Closed context of "${request.url()}"`);
       return;
     }
 
