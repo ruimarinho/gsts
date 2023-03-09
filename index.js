@@ -25,7 +25,7 @@ const paths = envpaths('gsts', { suffix: '' });
 // Define all available cli options.
 const cliParameters = {
   'aws-profile': {
-    description: 'Profile name used to read AWS config for (e.g. region)',
+    description: 'AWS profile name to associate credentials with',
     required: true
   },
   'aws-role-arn': {
@@ -49,7 +49,7 @@ const cliParameters = {
     awsConfigKey: 'gsts.clean'
   },
   'cache-dir': {
-    description: 'Where to store gsts cache',
+    description: 'Where to store cached data',
     default: paths.cache,
     awsConfigKey: 'gsts.cache_dir'
   },
@@ -76,16 +76,17 @@ const cliParameters = {
     awsConfigKey: 'gsts.idp_id'
   },
   'playwright-engine': {
-    description: 'Set custom browser engine',
+    description: 'Set playwright browser engine',
     choices: ['chromium', 'firefox', 'webkit'],
     default: 'chromium',
     awsConfigKey: 'gsts.playwright_engine'
   },
   'playwright-engine-executable-path': {
-    description: 'Set custom executable path for browser engine',
+    description: 'Set playwright executable path for browser engine',
     awsConfigKey: 'gsts.playwright_engine_executable_path'
   },
   'playwright-engine-channel': {
+    description: 'Set playwright browser engine channel',
     choices: ['chrome', 'chrome-beta', 'msedge-beta', 'msedge-dev'],
     awsConfigKey: 'gsts.playwright_engine_channel'
   },
