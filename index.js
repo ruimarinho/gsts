@@ -114,7 +114,7 @@ const cliParameters = {
 
 process.on('unhandledRejection', e => {
   logger.stop();
-  console.error(e);
+  logger.error(e);
   process.exit(1);
 });
 
