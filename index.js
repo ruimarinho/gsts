@@ -201,6 +201,7 @@ const argv = await yargs(hideBin(process.argv))
   .command('console', 'Authenticate via SAML and open Amazon AWS console in the default browser')
   .options(cliParameters)
   .strictCommands()
+  .wrap(150)
   .argv;
 
 /**
