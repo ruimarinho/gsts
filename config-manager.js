@@ -7,7 +7,13 @@ import { camalize } from './utils.js'
 import config from '@aws-sdk/shared-ini-file-loader';
 
 /**
+ * Process config using the following order:
  *
+ * 1. `gsts` command line arguments.
+ * 2. `gsts` environment variables (`GSTS_*`).
+ * 3. `aws` cli configuration settings, [in the same order processed by the the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html#cli-configure-quickstart-precedence):
+ *   1. `aws` cli environment variables
+ *   2. `aws` cli configuration file (i.e. those in `~/.aws/config`)
  */
 
 export async function processConfig(cliParameters, argv, env) {

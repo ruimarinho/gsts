@@ -39,14 +39,19 @@ process.on('unhandledRejection', e => {
 
 const cliParameters = generateCliParameters(paths);
 
-// Parse command line arguments.
+/**
+ * Parse command line parameters via yargs.
+ *
+ * At the .middleware() stage, `gsts` supported environment variables
+ * have already been populated, so testing for undefined `argv`
+ * properties means both a command line parameter as well as an
+ * environment variable value are not present, so we can safely proceed
+ * to the `aws` cli configuration settings parsing in the same order as it does.
+ */
+
 const argv = await yargs(hideBin(process.argv))
   .usage('gsts')
   .middleware(async (argv) => {
-    // At this stage, `gsts` supported environment variables have already been populated,
-    // so testing for undefined `argv` properties means both a command line parameter
-    // as well as an environment variable value are not present, so we can safely proceed
-    // to the `aws` cli configuration settings parsing in the same order as it does.
     return configManager.processConfig(cliParameters, argv, process.env);
   }, true)
   .env('GSTS')
