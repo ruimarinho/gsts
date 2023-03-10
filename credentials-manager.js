@@ -23,8 +23,7 @@ export class CredentialsManager {
   constructor(logger, region, cacheDir) {
     this.logger = logger;
     this.parser = new Parser(logger);
-    this.cacheDir = cacheDir;
-    this.credentialsFile = join(cacheDir, 'credentials');
+    this.credentialsFile = cacheDir ? join(cacheDir, 'credentials') : null;
     this.stsClient = new STSClient({ region })
   }
 
@@ -123,7 +122,9 @@ export class CredentialsManager {
       profile
     });
 
-    await this.saveCredentials(profile, session);
+    if (this.credentialsFile) {
+      await this.saveCredentials(profile, session);
+    }
 
     return session;
   }
@@ -135,7 +136,7 @@ export class CredentialsManager {
   async saveCredentials(profile, session) {
     const contents = ini.encode(session.toIni(profile));
 
-    await mkdir(dirname(this.cacheDir), { recursive: true });
+    await mkdir(dirname(this.credentialsFile), { recursive: true });
     await writeFile(this.credentialsFile, contents);
     await chmod(this.credentialsFile, 0o600)
 

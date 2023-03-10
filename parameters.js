@@ -19,21 +19,21 @@ export function generateCliParameters(paths) {
       required: true,
       awsConfigKey: 'region',
     },
+    'cache-dir': {
+      description: 'Where to store cached data',
+      default: paths.cache,
+      awsConfigKey: 'gsts.cache_dir'
+    },
     'clean': {
       type: 'boolean',
       config: false,
       description: 'Start authorization from a clean session state',
       awsConfigKey: 'gsts.clean'
     },
-    'cache-dir': {
-      description: 'Where to store cached data',
-      default: paths.cache,
-      awsConfigKey: 'gsts.cache_dir'
-    },
-    'output': {
-      alias: 'o',
-      description: `Output format`,
-      choices: ['json']
+    'credentials-cache': {
+      type: 'boolean',
+      default: true,
+      hidden: true,
     },
     'force': {
       type: 'boolean',
@@ -51,6 +51,15 @@ export function generateCliParameters(paths) {
       description: 'Identity Provider ID (IdP ID)',
       required: true,
       awsConfigKey: 'gsts.idp_id'
+    },
+    'no-credentials-cache': {
+      description: 'Disable default behaviour of storing credentials in --cache-dir',
+      type: 'boolean'
+    },
+    'output': {
+      alias: 'o',
+      description: `Output format`,
+      choices: ['json']
     },
     'playwright-engine': {
       description: 'Set playwright browser engine',

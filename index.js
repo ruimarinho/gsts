@@ -73,7 +73,7 @@ const SAML_URL = `https://accounts.google.com/o/saml2/initsso?idpid=${argv.idpId
  * Create instance of CredentialsManager with logger.
  */
 
-const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv.cacheDir);
+const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['credentials-cache'] ? argv.cacheDir : null);
 
 /**
  * Main execution routine which handles command-line flags.
@@ -98,20 +98,18 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv.c
 
   let isAuthenticated = false;
 
-  if (!argv.headful) {
+  if (!argv.headful && argv['credentials-cache'] && !argv.force) {
     try {
       let session = await credentialsManager.loadCredentials(argv.awsProfile, argv.awsRoleArn);
 
-      if (!argv.force) {
-        if (session.isValid()) {
-          logger.info('Session is valid until %s. Use --force to ignore.', session.expiresAt);
-          logger.stop();
+      if (session.isValid()) {
+        logger.info('Session is valid until %s. Use --force to ignore.', session.expiresAt);
+        logger.stop();
 
-          formatOutput(session, argv.output);
-          return;
-        } else {
-          logger.info('Session has expired on %s', session.expiresAt);
-        }
+        formatOutput(session, argv.output);
+        return;
+      } else {
+        logger.info('Session has expired on %s, refreshing credentials...', session.expiresAt);
       }
     } catch (e) {
       // Credentials file not being found is an expected error.
