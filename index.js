@@ -194,6 +194,11 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
 
         formatOutput(session, argv.output);
       } catch (e) {
+        // Passthrough STSServiceException from AWS SDK.
+        if (e.Code === 'ValidationError') {
+          throw e;
+        }
+
         logger.debug('An error has ocurred while authenticating', e);
 
         if (e instanceof RoleNotFoundError) {

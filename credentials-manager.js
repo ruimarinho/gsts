@@ -5,10 +5,10 @@
 
 import { Parser } from './parser.js';
 import { STSClient, AssumeRoleWithSAMLCommand } from '@aws-sdk/client-sts';
-import { RoleNotFoundError } from './errors.js';
+import { ProfileNotFoundError, RoleNotFoundError, RoleMismatchError } from './errors.js';
 import { Session } from './session.js';
 import { dirname, join } from 'node:path';
-import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, writeFile, constants } from 'node:fs/promises';
 import ini from 'ini';
 
 // Regex pattern for duration seconds validation error.
@@ -71,44 +71,32 @@ export class CredentialsManager {
    */
 
   async assumeRoleWithSAML(samlAssertion, role, profile, customSessionDuration) {
-    let sessionDuration = role.sessionDuration;
+    let sessionDuration = customSessionDuration || role.sessionDuration;
+    let stsResponse;
 
-    if (customSessionDuration) {
-      sessionDuration = customSessionDuration;
+    try {
+      const assumeRoleCommand = {
+        PrincipalArn: role.principalArn,
+        RoleArn: role.roleArn,
+        SAMLAssertion: samlAssertion
+      };
 
-      try {
-        await this.stsClient.send(new AssumeRoleWithSAMLCommand({
-          DurationSeconds: sessionDuration,
-          PrincipalArn: role.principalArn,
-          RoleArn: role.roleArn,
-          SAMLAssertion: samlAssertion
-        }));
+      if (sessionDuration) {
+        assumeRoleCommand.DurationSeconds = sessionDuration;
+      }
 
-      } catch (e) {
-        if (e.code !== 'ValidationError' ||  !/durationSeconds/.test(e.message)) {
-          throw e;
-        }
-
+      stsResponse = await this.stsClient.send(new AssumeRoleWithSAMLCommand(assumeRoleCommand));
+    } catch (e) {
+      if (REGEX_PATTERN_DURATION_SECONDS.test(e.message)) {
         let matches = e.message.match(REGEX_PATTERN_DURATION_SECONDS);
-        if (!matches) {
-          return;
-        }
-
-        let duration = matches[1];
-        if (duration) {
-          sessionDuration = Number(duration);
-
-          this.logger.warn('Custom session duration %d exceeds maximum session duration of %d allowed for role. Please set --aws-session-duration=%d or $AWS_SESSION_DURATION=%d to surpress this warning', customSessionDuration, sessionDuration, sessionDuration, sessionDuration);
+        let maxDuration = matches[1];
+        if (maxDuration) {
+          this.logger.warn(`Custom session duration ${customSessionDuration} exceeds maximum session duration of ${maxDuration} allowed for role. Please set --aws-session-duration=%d or $GSTS_AWS_SESSION_DURATION=%d to surpress this warning`);
         }
       }
-    }
 
-    const stsResponse = await this.stsClient.send(new AssumeRoleWithSAMLCommand({
-      DurationSeconds: sessionDuration,
-      PrincipalArn: role.principalArn,
-      RoleArn: role.roleArn,
-      SAMLAssertion: samlAssertion
-    }));
+      throw e;
+    }
 
     this.logger.debug('Role ARN "%s" has been assumed %O', role.roleArn, stsResponse);
 
@@ -138,7 +126,7 @@ export class CredentialsManager {
 
     await mkdir(dirname(this.credentialsFile), { recursive: true });
     await writeFile(this.credentialsFile, contents);
-    await chmod(this.credentialsFile, 0o600)
+    await chmod(this.credentialsFile, constants.S_IRUSR | constants.S_IWUSR);
 
     this.logger.info('The credentials have been stored in "%s" under AWS profile "%s" with contents %o', this.credentialsFile, profile, contents);
   }
@@ -148,14 +136,15 @@ export class CredentialsManager {
    * Optionally accepts a AWS profile (usually a name representing
    * a section on the .ini-like file).
    */
-  /**
-   * Extract session expiration from AWS credentials file for a given profile.
-   * The property `sessionExpirationDelta` represents a safety buffer to avoid requests
-   * failing at the exact time of expiration.
-   */
 
   async loadCredentials(profile, roleArn) {
-    this.logger.debug('Loading credentials from "%s" for profile "%s".', this.credentialsFile, profile);
+    if (!this.credentialsFile) {
+      const error = new Error('ENOENT: no such file or directory');
+      error.code = 'ENOENT';
+      throw error;
+    }
+
+    this.logger.debug(`Loading credentials from "${this.credentialsFile}" for profile "${profile}".`);
 
     let credentials;
 
@@ -163,22 +152,22 @@ export class CredentialsManager {
       credentials = ini.parse(await readFile(this.credentialsFile, 'utf-8'));
     } catch (e) {
       if (e.code === 'ENOENT') {
-        this.logger.debug('Credentials file does not exist at %s.', this.credentialsFile)
+        this.logger.debug(`Credentials file not found at "${this.credentialsFile}".`)
       }
 
       throw e;
     }
 
     if (!credentials[profile]) {
-      throw new Error(`Credentials for profile "${profile}" are not available.`);
+      throw new ProfileNotFoundError(profile);
     }
 
     const session = Session.fromIni(credentials[profile]);
 
-    if (roleArn && session.role.roleArn)  {
-      this.logger.warn('Found profile "%s" credentials for a different role ARN (found "%s" != received "%s")', profile, session.role.roleArn, roleArn);
+    if (roleArn && (roleArn !== session.role.roleArn))  {
+      this.logger.warn(`Found profile "${profile}" credentials for a different role ARN (found "${session.role.roleArn}" != received "${roleArn}").`);
 
-      throw new Error('Invalid role ARN');
+      throw new RoleMismatchError(roleArn, session.role.roleArn);
     }
 
     return session;
