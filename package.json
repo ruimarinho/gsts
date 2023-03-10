@@ -10,13 +10,17 @@
   },
   "bin": "index.js",
   "files": [
+    "config-manager.js",
     "credentials-manager.js",
     "errors.js",
+    "formatter.js",
     "index.js",
     "logger.js",
+    "parameters.js",
     "parser.js",
     "role.js",
-    "session.js"
+    "session.js",
+    "utils.js"
   ],
   "keywords": [
     "google",
