@@ -1,0 +1,80 @@
+
+/**
+ * Module dependencies.
+ */
+
+import { camalize } from './utils.js'
+import config from '@aws-sdk/shared-ini-file-loader';
+
+/**
+ *
+ */
+
+export async function processConfig(cliParameters, argv, env) {
+  // Load the AWS config file taking into consideration the `$AWS_CONFIG_FILE` environment
+  // variable as supported by the `aws` cli.
+  const awsConfig = await config.loadSharedConfigFiles();
+
+  // If defined, `$AWS_REGION` overrides the values in the environment variable
+  // `$AWS_DEFAULT_REGION` and the profile setting region. You can override `$AWS_REGION`
+  // by using the `--aws-region` command line parameter.
+  if (!argv.awsRegion && env.AWS_REGION) {
+    argv.awsRegion = argv['aws-region'] = env.AWS_REGION;
+  }
+
+  // If defined, `$AWS_DEFAULT_REGION` overrides the value for the profile setting region.
+  // You can override `$AWS_DEFAULT_REGION` by using the `--aws-region` command line parameter.
+  if (!argv.awsRegion && env.AWS_DEFAULT_REGION) {
+    argv.awsRegion = argv['aws-region'] = env.AWS_DEFAULT_REGION;
+  }
+
+  // If defined, `$AWS_PROFILE` overrides the behavior of using the profile named [default] in
+  // the `aws` cli configuration file. You can override this environment variable by using the
+  // `--aws-profile` command line parameter.
+  if (!argv.awsProfile && env.AWS_PROFILE) {
+    argv.awsProfile = argv['aws-profile'] = env.AWS_PROFILE;
+  } else {
+    argv.awsProfile = argv['aws-profile'] = 'default'
+  }
+
+  for (let parameterKey in cliParameters) {
+    // Test if this specific command line parameter is supported via the `aws` cli profile configuration.
+    if (!cliParameters[parameterKey]?.awsConfigKey) {
+      continue;
+    }
+
+    // If supported, and this specific command line parameter has not been set previously by `aws` cli-supported
+    // environement variables, proceed with parsing values from the `aws` cli configuration file.
+    // Some `gsts` parameters offer default values, so we need to allow customizing those as well.
+    if (argv[parameterKey] === undefined || argv[parameterKey] === cliParameters[parameterKey].default) {
+      // Read value from `aws` cli profile configuration settings.
+      const value = awsConfig.configFile[argv.awsProfile]?.[cliParameters[parameterKey].awsConfigKey];
+      // Get expected value type.
+      const type = cliParameters[parameterKey]?.type;
+      // Coerce into expected value type.
+      switch (type) {
+        case 'number':
+          argv[parameterKey] = Number(value);
+          break;
+        case 'boolean':
+          argv[parameterKey] = Boolean(value);
+          break;
+        default:
+          argv[parameterKey] = value;
+          break;
+      }
+
+      // Normalize into yargs structure.
+      argv[parameterKey] = argv[camalize(parameterKey)];
+    }
+  }
+
+  // Automatically enable json output format if `gsts` is not inside an
+  // interactive shell to enable compatibility with third-party tools
+  // like the `aws` cli.
+  if (argv.output == undefined && !process.stdout.isTTY) {
+    argv.output = 'json';
+  }
+
+  return argv;
+};
