@@ -282,7 +282,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
     }
 
     logger.debug('Error caught while browsing to the initsso page', e);
-    return;
+    throw e;
   }
 
   if (argv.headful) {
