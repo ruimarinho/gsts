@@ -111,7 +111,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
         logger.info('Session is valid until %s. Use --force to ignore', session.expiresAt);
         logger.stop();
 
-        formatOutput(session, argv.output);
+        process.stdout.write(formatOutput(session, argv.output));
         return;
       } else {
         logger.info('Session has expired on %s, refreshing credentials...', session.expiresAt);
@@ -192,7 +192,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
 
         logger.succeed('Login successful!');
 
-        formatOutput(session, argv.output);
+        process.stdout.write(formatOutput(session, argv.output));
       } catch (e) {
         // Passthrough STSServiceException from AWS SDK.
         if (e.Code === 'ValidationError') {

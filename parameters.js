@@ -59,7 +59,7 @@ export function generateCliParameters(paths) {
     'output': {
       alias: 'o',
       description: `Output format`,
-      choices: ['json']
+      choices: ['json', 'none']
     },
     'playwright-engine': {
       description: 'Set playwright browser engine',
