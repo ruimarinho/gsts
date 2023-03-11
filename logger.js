@@ -14,6 +14,14 @@ const PLAYWRIGHT_LOG_LEVELS = {
   warning: 'warn'
 };
 
+const ORA_LOG_LEVELS = {
+  info: 'info',
+  warn: 'warn',
+  debug: 'info',
+  error: 'fail',
+  succeed: 'succeed'
+}
+
 export { PLAYWRIGHT_LOG_LEVELS };
 
 /**
@@ -21,18 +29,21 @@ export { PLAYWRIGHT_LOG_LEVELS };
  */
 
 export class Logger {
-    constructor(verbose, isTTY) {
+    constructor(verbosity, isTTY, stream) {
+      this.verbosity = verbosity;
       this.isTTY = isTTY;
-      this.verbose = verbose;
       this.ora = ora({ isEnabled: this.isTTY });
+      this.stream = stream;
     }
 
-    format(...args) {
+    log(level, ...args) {
       if (!this.isTTY) {
-        args.unshift(new Date().toISOString())
+        this.stream.write(`${new Date().toISOString()} ${level.toUpperCase()} gsts: ${format(...args)}`);
+        return;
       }
 
-      return format(...args);
+      return this.ora[ORA_LOG_LEVELS[level]](format(...args));
+
     }
 
     start(...args) {
@@ -44,30 +55,49 @@ export class Logger {
     }
 
     stop(...args) {
+      if (!this.isTTY) {
+        return;
+      }
+
       return this.ora.stop(...args);
     }
 
     debug(...args) {
-      if (!this.verbose) {
+      // For security reasons, do not log debug messages which can contain credentials secrets
+      // when in non-interactive mode, since other third-party tools could capture this content
+      // as part of their error processing logic.
+      if (!this.isTTY) {
         return;
       }
 
-      return this.ora.info(this.format(...args));
+      if (this.verbosity < 2) {
+        return;
+      }
+
+      return this.log('debug', ...args);
     }
 
     info(...args) {
-      return this.ora.info(this.format(...args));
+      if (this.verbosity < 1) {
+        return;
+      }
+
+      return this.log('info', ...args);
     }
 
     warn(...args) {
-      return this.ora.warn(this.format(...args));
+      return this.log('warn', ...args);
     }
 
     error(...args) {
-      return this.ora.fail(this.format(...args));
+      return this.log('error', ...args);
     }
 
     succeed(...args) {
-      return this.ora.succeed(this.format(...args));
+      if (!this.isTTY) {
+        return;
+      }
+
+      return this.log('succeed', ...args);
     }
 }
