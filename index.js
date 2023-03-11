@@ -260,7 +260,11 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
   try {
     const ssoPage = await page.goto(SAML_URL, { waitUntil: 'load' })
 
-    if (/ServiceLogin/.test(ssoPage.url())) {
+    if (!ssoPage.ok()) {
+      throw new Error(`Got status code "${ssoPage.status()}" while requesting "${SAML_URL}"`);
+    }
+
+    if (/ServiceLogin|InteractiveLogin/.test(ssoPage.url())) {
       if (!isAuthenticated && !argv.headful) {
         logger.warn('User is not authenticated, spawning headful instance');
 
