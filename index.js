@@ -244,7 +244,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
       return;
     }
 
-    logger.debug(`Request to "${request.url()}" has failed`);
+    logger.debug(`Request to "${request.url()}" has failed with ${request.failure().errorText}`);
 
     // The request to the AWS console is aborted on successful login for performance reasons,
     // so in this particular case it's actually an expected outcome.
