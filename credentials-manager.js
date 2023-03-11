@@ -57,7 +57,7 @@ export class CredentialsManager {
       throw new RoleNotFoundError(roles);
     }
 
-    this.logger.debug('Found custom role ARN "%s" with principal ARN "%s"', customRole.roleArn, customRole.principalArn);
+    this.logger.debug('Found requested custom role ARN "%s" with principal ARN "%s"', customRole.roleArn, customRole.principalArn);
 
     return {
       roleToAssume: customRole,
@@ -98,7 +98,8 @@ export class CredentialsManager {
       throw e;
     }
 
-    this.logger.debug('Role ARN "%s" has been assumed %O', role.roleArn, stsResponse);
+    this.logger.info('Role ARN "%s" has been assumed via SAML', role.roleArn);
+    this.logger.debug('Role ARN "%s" AssumeRoleWithSAMLCommand response was %o', role.roleArn, stsResponse);
 
     const session = new Session({
       accessKeyId: stsResponse.Credentials.AccessKeyId,
@@ -128,7 +129,8 @@ export class CredentialsManager {
     await writeFile(this.credentialsFile, contents);
     await chmod(this.credentialsFile, constants.S_IRUSR | constants.S_IWUSR);
 
-    this.logger.info('The credentials have been stored in "%s" under AWS profile "%s" with contents %o', this.credentialsFile, profile, contents);
+    this.logger.info('The credentials have been stored in "%s" under AWS profile "%s"', this.credentialsFile, profile);
+    this.logger.debug('Contents for credentials file "%s" is: \n %o', this.credentialsFile, contents);
   }
 
   /**
@@ -144,12 +146,12 @@ export class CredentialsManager {
       throw error;
     }
 
-    this.logger.debug(`Loading credentials from "${this.credentialsFile}" for profile "${profile}".`);
-
     let credentials;
 
     try {
       credentials = ini.parse(await readFile(this.credentialsFile, 'utf-8'));
+
+      this.logger.info(`Loaded credentials from "${this.credentialsFile}" for profile "${profile}".`);
     } catch (e) {
       if (e.code === 'ENOENT') {
         this.logger.debug(`Credentials file not found at "${this.credentialsFile}".`)

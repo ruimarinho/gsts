@@ -108,7 +108,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
       let session = await credentialsManager.loadCredentials(argv.awsProfile, argv.awsRoleArn);
 
       if (session.isValid()) {
-        logger.info('Session is valid until %s. Use --force to ignore.', session.expiresAt);
+        logger.info('Session is valid until %s. Use --force to ignore', session.expiresAt);
         logger.stop();
 
         formatOutput(session, argv.output);
@@ -235,16 +235,16 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
   });
 
   page.on('requestfailed', async request => {
-    logger.debug(`Request to "${request.url()}" has failed`);
-
     // Requests tagged with this specific error were made by gsts and should result
     // in a program termination.
     if (request.failure().errorText === 'net::ERR_BLOCKED_BY_CLIENT') {
-      logger.debug(`Request to "${request.url()}" has failed due to client request block`);
+      logger.debug(`Request to "${request.url()}" has has been successfully blocked`);
       await context.close();
       logger.debug(`Closed context of "${request.url()}"`);
       return;
     }
+
+    logger.debug(`Request to "${request.url()}" has failed`);
 
     // The request to the AWS console is aborted on successful login for performance reasons,
     // so in this particular case it's actually an expected outcome.

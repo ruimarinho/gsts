@@ -34,7 +34,7 @@ export class Parser {
     if (idpSessionDuration) {
       idpSessionDuration = Number(idpSessionDuration);
 
-      this.logger.debug('Parsed default IDP SessionDuration attribute with value %d', idpSessionDuration);
+      this.logger.debug('Parsed `SessionDuration` attribute with value %d', idpSessionDuration);
     }
 
     for (const attribute of saml.getAttribute('https://aws.amazon.com/SAML/Attributes/Role')) {
@@ -52,7 +52,7 @@ export class Parser {
       roles.push(new Role(roleName, roleArn, samlProvider, idpSessionDuration))
     }
 
-    this.logger.debug('Parsed Role attribute with value %o', roles);
+    this.logger.debug('Parsed `Role` attribute with value %o', roles);
 
     return {
       roles,
