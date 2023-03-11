@@ -16,7 +16,7 @@ import config from '@aws-sdk/shared-ini-file-loader';
  *   2. `aws` cli configuration file (i.e. those in `~/.aws/config`)
  */
 
-export async function processConfig(cliParameters, argv, env) {
+export async function processConfig(cliParameters, argv, env, isTTY) {
   // Load the AWS config file taking into consideration the `$AWS_CONFIG_FILE` environment
   // variable as supported by the `aws` cli.
   const awsConfig = await config.loadSharedConfigFiles();
@@ -78,7 +78,7 @@ export async function processConfig(cliParameters, argv, env) {
   // Automatically enable json output format if `gsts` is not inside an
   // interactive shell to enable compatibility with third-party tools
   // like the `aws` cli.
-  if (argv.output == undefined && !process.stdout.isTTY) {
+  if (argv.output == undefined && !isTTY) {
     argv.output = 'json';
   }
 

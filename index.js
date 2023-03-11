@@ -52,7 +52,7 @@ const cliParameters = generateCliParameters(paths);
 const argv = await yargs(hideBin(process.argv))
   .usage('gsts')
   .middleware(async (argv) => {
-    return configManager.processConfig(cliParameters, argv, process.env);
+    return configManager.processConfig(cliParameters, argv, process.env, process.stdout.isTTY);
   }, true)
   .env('GSTS')
   .command('console', 'Authenticate via SAML and open Amazon AWS console in the default browser')
