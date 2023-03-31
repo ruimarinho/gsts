@@ -7,7 +7,7 @@
 import * as configManager from './config-manager.js';
 import { CredentialsManager } from './credentials-manager.js';
 import { Logger, PLAYWRIGHT_LOG_LEVELS } from './logger.js';
-import { RoleNotFoundError } from './errors.js';
+import { ProfileNotFoundError, RoleNotFoundError } from './errors.js';
 import { generateCliParameters } from './parameters.js';
 import { fileURLToPath, parse as urlparse } from 'node:url';
 import { format as formatOutput } from './formatter.js';
@@ -117,6 +117,11 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
         logger.info('Session has expired on %s, refreshing credentials...', session.expiresAt);
       }
     } catch (e) {
+      // ProfileNotFoundError is expected, gsts will try to create the credential
+      if (e instanceof ProfileNotFoundError) {
+        logger.info('The profile "%s" not found in AWS credentials "%s"', profile, this.credentialsFile);
+      }
+
       // Credentials file not being found is an expected error.
       if (e.code !== 'ENOENT') {
         throw e;
