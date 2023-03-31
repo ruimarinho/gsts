@@ -125,7 +125,7 @@ export class CredentialsManager {
   async saveCredentials(profile, session) {
     let credentials;
     try {
-      credentials = this.getCredentialsFromFile();
+      credentials = await this.getCredentialsFromFile();
     } catch (e) {
       // Credentials file not being found is an expected error.
       if (e.code !== 'ENOENT') {
@@ -187,7 +187,7 @@ export class CredentialsManager {
     try {
       credentials = ini.parse(await readFile(this.credentialsFile, 'utf-8'));
 
-      this.logger.info(`Loaded credentials from "${this.credentialsFile}" for profile "${profile}".`);
+      this.logger.info(`Loaded credentials from "${this.credentialsFile}".`);
     } catch (e) {
       if (e.code === 'ENOENT') {
         this.logger.debug(`Credentials file not found at "${this.credentialsFile}".`)

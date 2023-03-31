@@ -121,9 +121,8 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
       if (e instanceof ProfileNotFoundError) {
         logger.info('The profile "%s" not found in cached credentials', argv.awsProfile);
       }
-
       // Credentials file not being found is an expected error.
-      if (e.code !== 'ENOENT') {
+      else if (e.code !== 'ENOENT') {
         throw e;
       }
     }
