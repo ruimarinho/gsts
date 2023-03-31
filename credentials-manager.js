@@ -125,7 +125,7 @@ export class CredentialsManager {
   async saveCredentials(profile, session) {
     let credentials;
     try {
-      credentials = this.loadAllCredentials();
+      credentials = this.getCredentialsFromFile();
     } catch (e) {
       // Credentials file not being found is an expected error.
       if (e.code !== 'ENOENT') {
@@ -158,7 +158,7 @@ export class CredentialsManager {
    */
 
   async loadCredentials(profile, roleArn) {
-    const credentials = await this.loadAllCredentials();
+    const credentials = await this.getCredentialsFromFile();
 
     if (!credentials[profile]) {
       throw new ProfileNotFoundError(profile);
@@ -175,7 +175,7 @@ export class CredentialsManager {
     return session;
   }
 
-  async loadAllCredentials() {
+  async getCredentialsFromFile() {
     if (!this.credentialsFile) {
       const error = new Error('ENOENT: no such file or directory');
       error.code = 'ENOENT';
