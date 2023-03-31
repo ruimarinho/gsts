@@ -119,7 +119,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
     } catch (e) {
       // ProfileNotFoundError is expected, gsts will try to create the credential
       if (e instanceof ProfileNotFoundError) {
-        logger.info('The profile "%s" not found in AWS credentials "%s"', profile, this.credentialsFile);
+        logger.info('The profile "%s" not found in cached credentials', argv.awsProfile);
       }
 
       // Credentials file not being found is an expected error.
