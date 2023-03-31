@@ -140,6 +140,24 @@ export class CredentialsManager {
    */
 
   async loadCredentials(profile, roleArn) {
+    const credentials = await this.loadAllCredentials();
+
+    if (!credentials[profile]) {
+      throw new ProfileNotFoundError(profile);
+    }
+
+    const session = Session.fromIni(credentials[profile]);
+
+    if (roleArn && (roleArn !== session.role.roleArn))  {
+      this.logger.warn(`Found profile "${profile}" credentials for a different role ARN (found "${session.role.roleArn}" != received "${roleArn}").`);
+
+      throw new RoleMismatchError(roleArn, session.role.roleArn);
+    }
+
+    return session;
+  }
+
+  async loadAllCredentials() {
     if (!this.credentialsFile) {
       const error = new Error('ENOENT: no such file or directory');
       error.code = 'ENOENT';
@@ -160,18 +178,6 @@ export class CredentialsManager {
       throw e;
     }
 
-    if (!credentials[profile]) {
-      throw new ProfileNotFoundError(profile);
-    }
-
-    const session = Session.fromIni(credentials[profile]);
-
-    if (roleArn && (roleArn !== session.role.roleArn))  {
-      this.logger.warn(`Found profile "${profile}" credentials for a different role ARN (found "${session.role.roleArn}" != received "${roleArn}").`);
-
-      throw new RoleMismatchError(roleArn, session.role.roleArn);
-    }
-
-    return session;
+    return credentials;
   }
 }
