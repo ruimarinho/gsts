@@ -123,9 +123,27 @@ export class CredentialsManager {
    */
 
   async saveCredentials(profile, session) {
-    const contents = ini.encode(session.toIni(profile));
+    let credentials;
+    try {
+      credentials = this.loadAllCredentials();
+    } catch (e) {
+      // Credentials file not being found is an expected error.
+      if (e.code !== 'ENOENT') {
+        throw e;
+      }
+    }
 
-    await mkdir(dirname(this.credentialsFile), { recursive: true });
+    let contents;
+    if (credentials) {
+      // Add new credential to existing credentials
+      credentials[profile] = session.toIni(profile)[profile];
+      contents = ini.encode(credentials);
+    } else {
+      // Init credentials
+      contents = ini.encode(session.toIni(profile));
+      await mkdir(dirname(this.credentialsFile), { recursive: true });
+    }
+
     await writeFile(this.credentialsFile, contents);
     await chmod(this.credentialsFile, constants.S_IRUSR | constants.S_IWUSR);
 
