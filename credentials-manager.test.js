@@ -221,6 +221,30 @@ describe('assumeRoleWithSAML', () => {
   });
 });
 
+describe('loadCredentialsFile', () => {
+  it('should throw an error if cache dir is not set', async () => {
+    const credentialsManager = new CredentialsManager(logger, awsRegion);
+
+    await expect(credentialsManager.loadCredentialsFile()).rejects.toThrow('ENOENT');
+  });
+
+  it('should throw an error if credentials file is not found in cache dir', async () => {
+    const cacheDir = await mkdtemp(join(tmpdir(), 'gsts-'));
+    const credentialsManager = new CredentialsManager(logger, awsRegion, cacheDir);
+
+    await expect(credentialsManager.loadCredentialsFile()).rejects.toThrow('ENOENT');
+  });
+
+  it('should load credentials file if found in cache dir', async () => {
+    const cacheDir = await mkdtemp(join(tmpdir(), 'gsts-'));
+    const credentialsManager = new CredentialsManager(logger, awsRegion, cacheDir);
+
+    await credentialsManager.saveCredentials(awsProfile, new Session(mockSessionData));
+
+    await expect((await credentialsManager.loadCredentialsFile(awsProfile))).not.toBeNull();
+  });
+});
+
 describe('loadCredentials', () => {
   it('should throw an error if credentials are not found', async () => {
     const cacheDir = await mkdtemp(join(tmpdir(), 'gsts-'));
@@ -299,5 +323,20 @@ describe('saveCredentials', () => {
     const savedSession = await credentialsManager.loadCredentials(awsProfile);
 
     expect(session).toEqual(savedSession);
+  });
+
+  it('stores multiple profile sessions under the same credentials files', async () => {
+    const cacheDir = `${tmpdir()}/gsts-${Math.random().toString(16).slice(2, 8)}`;
+    const credentialsManager = new CredentialsManager(logger, awsRegion, cacheDir);
+    const session = new Session(mockSessionData);
+
+    await credentialsManager.saveCredentials(awsProfile, session);
+    await credentialsManager.saveCredentials(`${awsProfile}_new`, session);
+
+    const savedSession1 = await credentialsManager.loadCredentials(awsProfile);
+    const savedSession2 = await credentialsManager.loadCredentials(`${awsProfile}_new`);
+
+    expect(session).toEqual(savedSession1);
+    expect(session).toEqual(savedSession2);
   });
 });

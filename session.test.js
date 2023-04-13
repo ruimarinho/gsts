@@ -45,16 +45,14 @@ describe('toIni', () => {
     });
 
     expect(session.toIni('test')).toEqual({
-      test: {
-        aws_access_key_id: 'AAAAAABBBBBBCCCCCCDDDDDD',
-        aws_role_arn: 'arn:aws:iam::123456789:role/Foobiz',
-        aws_role_name: 'Foobiz',
-        aws_role_principal_arn: 'arn:aws:iam::123456789:saml-provider/GSuite',
-        aws_secret_access_key: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
-        aws_session_expiration: '2020-04-19T10:32:19.000Z',
-        aws_session_token: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB',
-        aws_saml_assertion: 'T2NjdXB5IE1hcnMK'
-      }
+      aws_access_key_id: 'AAAAAABBBBBBCCCCCCDDDDDD',
+      aws_role_arn: 'arn:aws:iam::123456789:role/Foobiz',
+      aws_role_name: 'Foobiz',
+      aws_role_principal_arn: 'arn:aws:iam::123456789:saml-provider/GSuite',
+      aws_secret_access_key: '0nKJNoiu9oSJBjkb+aDvVVVvvvB+ErF33r4',
+      aws_session_expiration: '2020-04-19T10:32:19.000Z',
+      aws_session_token: 'DMMDnnnnKAkjSJi///////oiuISHJbMNBMNjkhkbljkJHGJGUGALJBjbjksbKLJHlOOKmmNAhhB',
+      aws_saml_assertion: 'T2NjdXB5IE1hcnMK'
     });
   });
 });
