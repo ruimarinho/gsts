@@ -123,7 +123,16 @@ export class CredentialsManager {
    */
 
   async saveCredentials(profile, session) {
-    const contents = ini.encode(session.toIni(profile));
+    const outputs = {};
+    try {
+      const credentials = ini.parse(await readFile(this.credentialsFile, 'utf-8'));
+      Object.keys(credentials).forEach(prof => {
+        outputs[prof] = ini.encode(Session.fromIni(credentials[prof]).toIni(prof));
+      })
+    } catch {}
+
+    outputs[profile] = ini.encode(session.toIni(profile));
+    const contents = Object.values(outputs).join("\n");
 
     await mkdir(dirname(this.credentialsFile), { recursive: true });
     await writeFile(this.credentialsFile, contents);

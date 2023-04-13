@@ -117,10 +117,6 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
         logger.info('Session has expired on %s, refreshing credentials...', session.expiresAt);
       }
     } catch (e) {
-      // Credentials file not being found is an expected error.
-      if (e.code !== 'ENOENT') {
-        throw e;
-      }
     }
   }
 

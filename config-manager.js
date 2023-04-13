@@ -24,24 +24,12 @@ export async function processConfig(cliParameters, argv, env, isTTY) {
   // If defined, `$AWS_REGION` overrides the values in the environment variable
   // `$AWS_DEFAULT_REGION` and the profile setting region. You can override `$AWS_REGION`
   // by using the `--aws-region` command line parameter.
-  if (!argv.awsRegion && env.AWS_REGION) {
-    argv.awsRegion = argv['aws-region'] = env.AWS_REGION;
-  }
-
-  // If defined, `$AWS_DEFAULT_REGION` overrides the value for the profile setting region.
-  // You can override `$AWS_DEFAULT_REGION` by using the `--aws-region` command line parameter.
-  if (!argv.awsRegion && env.AWS_DEFAULT_REGION) {
-    argv.awsRegion = argv['aws-region'] = env.AWS_DEFAULT_REGION;
-  }
+  argv.awsRegion = argv['aws-region'] = argv['aws-region'] || env.AWS_REGION || env.AWS_DEFAULT_REGION;
 
   // If defined, `$AWS_PROFILE` overrides the behavior of using the profile named [default] in
   // the `aws` cli configuration file. You can override this environment variable by using the
   // `--aws-profile` command line parameter.
-  if (!argv.awsProfile && env.AWS_PROFILE) {
-    argv.awsProfile = argv['aws-profile'] = env.AWS_PROFILE;
-  } else {
-    argv.awsProfile = argv['aws-profile'] = 'default'
-  }
+  argv.awsProfile = argv['aws-profile'] = argv['aws-profile'] || env.AWS_PROFILE || 'default';
 
   for (let parameterKey in cliParameters) {
     // Test if this specific command line parameter is supported via the `aws` cli profile configuration.
