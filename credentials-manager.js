@@ -8,8 +8,10 @@ import { STSClient, AssumeRoleWithSAMLCommand } from '@aws-sdk/client-sts';
 import { ProfileNotFoundError, RoleNotFoundError, RoleMismatchError } from './errors.js';
 import { Session } from './session.js';
 import { dirname, join } from 'node:path';
-import { chmod, mkdir, readFile, writeFile, constants } from 'node:fs/promises';
+import fs from 'node:fs/promises';
 import ini from 'ini';
+
+const { chmod, mkdir, readFile, writeFile, constants } = fs;
 
 // Regex pattern for duration seconds validation error.
 const REGEX_PATTERN_DURATION_SECONDS = /value less than or equal to ([0-9]+)/
