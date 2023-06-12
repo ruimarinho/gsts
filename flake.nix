@@ -16,6 +16,9 @@
         pkgs = import nixpkgs {
           inherit system;
           config.allowUnfree = true;
+          config.permittedInsecurePackages = [
+            "nodejs-16.20.0"
+          ];
         };
 
         npmlock2nix = import npmlock2nixSrc { inherit pkgs; lib = pkgs.lib; };
