@@ -78,7 +78,7 @@ If your user has access to more than one AWS ARN role, you may specify which one
 
 ```sh
 [default]
-credential_process = gsts --idp-id=<your_idp_id> --sp-id=<your_sp_id> --aws-arn-role=arn:aws:iam::111111112222222:role/role-name
+credential_process = gsts --idp-id=<your_idp_id> --sp-id=<your_sp_id> --aws-role-arn=arn:aws:iam::111111112222222:role/role-name
 ```
 
 You can then call any `aws` cli command and `gsts` will be spawned automatically:
