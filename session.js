@@ -51,18 +51,16 @@ export class Session {
     return true;
   }
 
-  toIni(profile) {
+  toIni() {
     return {
-      [profile]: {
-        aws_access_key_id: this.accessKeyId,
-        aws_role_arn: this.role.roleArn,
-        aws_role_name: this.role.name,
-        aws_role_principal_arn: this.role.principalArn,
-        aws_secret_access_key: this.secretAccessKey,
-        aws_session_expiration: this.expiresAt.toISOString(),
-        aws_session_token: this.sessionToken,
-        aws_saml_assertion: this.samlAssertion
-      }
+      aws_access_key_id: this.accessKeyId,
+      aws_role_arn: this.role.roleArn,
+      aws_role_name: this.role.name,
+      aws_role_principal_arn: this.role.principalArn,
+      aws_secret_access_key: this.secretAccessKey,
+      aws_session_expiration: this.expiresAt.toISOString(),
+      aws_session_token: this.sessionToken,
+      aws_saml_assertion: this.samlAssertion
     }
   }
 

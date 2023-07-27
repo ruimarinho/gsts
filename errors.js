@@ -1,16 +1,5 @@
 
 /**
- * RoleNotFoundError class.
- */
-
-export class RoleNotFoundError extends Error {
-    constructor(roles) {
-        super('Custom role not found');
-        this.roles = roles;
-    }
-}
-
-/**
  * ProfileNotFoundError class.
  */
 
@@ -31,5 +20,16 @@ export class RoleMismatchError extends Error {
 
         this.receivedRole = receivedRole;
         this.expectedRole = expectedRole;
+    }
+}
+
+/**
+ * RoleNotFoundError class.
+ */
+
+export class RoleNotFoundError extends Error {
+    constructor(roles) {
+        super('Custom role not found');
+        this.roles = roles;
     }
 }

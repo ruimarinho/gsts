@@ -123,10 +123,22 @@ export class CredentialsManager {
    */
 
   async saveCredentials(profile, session) {
-    const contents = ini.encode(session.toIni(profile));
+    let contents = {};
+
+    try {
+      contents = await this.loadCredentialsFile();
+    } catch (e) {
+      if (e.code !== 'ENOENT') {
+        throw e;
+      }
+
+      this.logger.debug(`Credentials file not found at "${this.credentialsFile}", creating it...`)
+    }
+
+    contents[profile] = session.toIni();
 
     await mkdir(dirname(this.credentialsFile), { recursive: true });
-    await writeFile(this.credentialsFile, contents);
+    await writeFile(this.credentialsFile, ini.encode(contents));
     await chmod(this.credentialsFile, constants.S_IRUSR | constants.S_IWUSR);
 
     this.logger.info('The credentials have been stored in "%s" under AWS profile "%s"', this.credentialsFile, profile);
@@ -134,31 +146,13 @@ export class CredentialsManager {
   }
 
   /**
-   * Load AWS credentials from the user home preferences.
+   * Load AWS credentials for a specific profile.
    * Optionally accepts a AWS profile (usually a name representing
    * a section on the .ini-like file).
    */
 
   async loadCredentials(profile, roleArn) {
-    if (!this.credentialsFile) {
-      const error = new Error('ENOENT: no such file or directory');
-      error.code = 'ENOENT';
-      throw error;
-    }
-
-    let credentials;
-
-    try {
-      credentials = ini.parse(await readFile(this.credentialsFile, 'utf-8'));
-
-      this.logger.info(`Loaded credentials from "${this.credentialsFile}" for profile "${profile}".`);
-    } catch (e) {
-      if (e.code === 'ENOENT') {
-        this.logger.debug(`Credentials file not found at "${this.credentialsFile}".`)
-      }
-
-      throw e;
-    }
+    const credentials = await this.loadCredentialsFile();
 
     if (!credentials[profile]) {
       throw new ProfileNotFoundError(profile);
@@ -173,5 +167,23 @@ export class CredentialsManager {
     }
 
     return session;
+  }
+
+  /**
+   * Load AWS credentials from the user home preferences.
+   */
+
+  async loadCredentialsFile() {
+    if (!this.credentialsFile) {
+      const error = new Error('ENOENT: no such file or directory');
+      error.code = 'ENOENT';
+      throw error;
+    }
+
+    let credentials = ini.parse(await readFile(this.credentialsFile, 'utf-8'));
+
+    this.logger.info(`Loaded credentials from "${this.credentialsFile}".`);
+
+    return credentials;
   }
 }
