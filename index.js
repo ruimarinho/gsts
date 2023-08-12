@@ -20,6 +20,7 @@ import playwright from 'playwright';
 import prompts from 'prompts';
 import trash from 'trash';
 import yargs from 'yargs';
+import { EndpointVerification } from './endpoint-verification.js';
 
 const paths = envpaths('gsts', { suffix: '' });
 
@@ -54,7 +55,7 @@ const argv = await yargs(hideBin(process.argv))
   .middleware(async (argv) => {
     return configManager.processConfig(cliParameters, argv, process.env, process.stdout.isTTY);
   }, true)
-  .env('GSTS')
+  .env('GOOGLE')
   .command('console', 'Authenticate via SAML and open Amazon AWS console in the default browser')
   .options(cliParameters)
   .strictCommands()
@@ -79,6 +80,12 @@ const SAML_URL = `https://accounts.google.com/o/saml2/initsso?idpid=${argv.idpId
  */
 
 const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['credentials-cache'] ? argv.cacheDir : null);
+
+/**
+ * Create instance of EndpointVerification with logger.
+ */
+
+const endpointVerification = new EndpointVerification(logger);
 
 /**
  * Main execution routine which handles command-line flags.
@@ -133,7 +140,19 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
     },
     channel: argv.playwrightEngineChannel,
     executablePath: argv.playwrightEngineExecutablePath,
+    args: []
   };
+
+  if (argv.endpointVerification) {
+    const pathToExtension = await endpointVerification.huntForExtension();
+
+    if (pathToExtension != null) {
+      playwrightOptions.args.push(
+        `--disable-extensions-except=${pathToExtension}`,
+        `--load-extension=${pathToExtension}`
+      );
+    }
+  }
 
   const context = await playwright[argv.playwrightEngine].launchPersistentContext(join(paths.data, argv.playwrightEngine), playwrightOptions);
   const page = await context.newPage();

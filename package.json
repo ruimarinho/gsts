@@ -12,6 +12,7 @@
   "files": [
     "config-manager.js",
     "credentials-manager.js",
+    "endpoint-verification.js",
     "errors.js",
     "formatter.js",
     "index.js",
@@ -40,6 +41,7 @@
     "ora": "^6.1.2",
     "playwright": "^1.36.2",
     "prompts": "^2.4.2",
+    "semver": "^7.5.4",
     "trash": "^8.1.1",
     "yargs": "^17.7.1"
   },

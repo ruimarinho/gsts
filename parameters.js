@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 // Define all available cli options.
 export function generateCliParameters(paths) {
   return {
@@ -18,10 +20,11 @@ export function generateCliParameters(paths) {
       description: 'AWS region to send requests to',
       required: true,
       awsConfigKey: 'region',
+      default: 'us-east-1'
     },
     'cache-dir': {
       description: 'Where to store cached data',
-      default: paths.cache,
+      default: path.join(process.env.HOME, '.aws'),
       awsConfigKey: 'gsts.cache_dir'
     },
     'clean': {
@@ -34,6 +37,11 @@ export function generateCliParameters(paths) {
       type: 'boolean',
       default: true,
       hidden: true,
+    },
+    'endpoint-verification': {
+      type: 'boolean',
+      default: false,
+      description: `Enable endpoint verification`
     },
     'force': {
       type: 'boolean',
@@ -69,7 +77,8 @@ export function generateCliParameters(paths) {
     },
     'playwright-engine-executable-path': {
       description: 'Set playwright executable path for browser engine',
-      awsConfigKey: 'gsts.playwright_engine_executable_path'
+      awsConfigKey: 'gsts.playwright_engine_executable_path',
+      alias: 'engine-executable-path'
     },
     'playwright-engine-channel': {
       description: 'Set playwright browser engine channel',
