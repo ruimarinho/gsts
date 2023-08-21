@@ -313,7 +313,9 @@ const endpointVerification = new EndpointVerification(logger);
       if (argv.username) {
         logger.debug(`Pre-filling email with ${argv.username}`);
 
-        await page.fill('input[type=email]', argv.username)
+        try {
+          await page.fill('input[type=email]', argv.username, {timeout: 2000})
+        } catch { };
       }
 
       await page.waitForResponse('https://signin.aws.amazon.com/saml');
