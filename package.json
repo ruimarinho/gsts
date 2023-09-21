@@ -38,9 +38,10 @@
     "libsaml": "^1.0.0",
     "open": "^8.4.2",
     "ora": "^6.1.2",
-    "playwright": "^1.36.2",
+    "playwright": "~1.18.0",
     "prompts": "^2.4.2",
     "trash": "^8.1.1",
+    "xmldom": "npm:@xmldom/xmldom@^0.8.10",
     "yargs": "^17.7.1"
   },
   "devDependencies": {
@@ -50,14 +51,14 @@
   },
   "overrides": {
     "libsaml": {
-      "xmldom": "^0.6.0"
+      "xmldom": "$xmldom"
     }
   },
   "resolutions": {
-    "libsaml/xmldom": "^0.6.0"
+    "libsaml/xmldom": "npm:@xmldom/xmldom@^0.8.4"
   },
   "engines": {
-    "node": "^12.20.0 || ^14.13.1 || >=16.0.0"
+    "node": "^>=18.0.0"
   },
   "scripts": {
     "test": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js"
