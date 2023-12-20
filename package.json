@@ -58,7 +58,7 @@
     "libsaml/xmldom": "npm:@xmldom/xmldom@^0.8.4"
   },
   "engines": {
-    "node": "^>=18.0.0"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "test": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js"
