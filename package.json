@@ -30,24 +30,24 @@
     "auth"
   ],
   "dependencies": {
-    "@aws-sdk/client-sts": "^3.276.0",
-    "@aws-sdk/shared-ini-file-loader": "^3.272.0",
+    "@aws-sdk/client-sts": "^3.478.0",
+    "@smithy/shared-ini-file-loader": "^2.2.7",
     "debug": "^4.3.4",
     "env-paths": "^3.0.0",
-    "ini": "^3.0.1",
+    "ini": "^4.1.1",
     "libsaml": "^1.0.0",
-    "open": "^8.4.2",
-    "ora": "^6.1.2",
-    "playwright": "~1.18.0",
+    "open": "^10.0.0",
+    "ora": "^7.0.1",
+    "playwright": "^1.40.1",
     "prompts": "^2.4.2",
     "trash": "^8.1.1",
     "xmldom": "npm:@xmldom/xmldom@^0.8.10",
-    "yargs": "^17.7.1"
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "aws-sdk-client-mock": "^2.1.0",
-    "aws-sdk-client-mock-jest": "^2.1.0",
-    "jest": "^29.4.3"
+    "aws-sdk-client-mock": "^3.0.0",
+    "aws-sdk-client-mock-jest": "^3.0.0",
+    "jest": "^29.7.0"
   },
   "overrides": {
     "libsaml": {

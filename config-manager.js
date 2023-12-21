@@ -4,7 +4,7 @@
  */
 
 import { camalize } from './utils.js'
-import config from '@aws-sdk/shared-ini-file-loader';
+import config from '@smithy/shared-ini-file-loader';
 
 /**
  * Process config using the following order:
