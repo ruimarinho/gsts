@@ -14,8 +14,8 @@ import { format as formatOutput } from './formatter.js';
 import { hideBin } from 'yargs/helpers';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
+import { openApp } from 'open';
 import envpaths from 'env-paths';
-import open from 'open';
 import playwright from 'playwright';
 import prompts from 'prompts';
 import trash from 'trash';
@@ -88,7 +88,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
   if (argv._[0] === 'console') {
     logger.debug('Opening url %s', SAML_URL);
 
-    return await open(SAML_URL);
+    return await openApp(SAML_URL);
   }
 
   if (argv.clean) {
@@ -281,7 +281,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
   } catch (e) {
     // The request to the AWS console is aborted on successful login for performance reasons,
     // so in this particular case closing the browser instance is actually an expected outcome.
-    if (/browser has disconnected/.test(e.message) || /Navigation failed because page was closed/.test(e.message)) {
+    if (/browser has disconnected/.test(e.message) || /browser has been closed/.test(e.message) || /Navigation failed because page was closed/.test(e.message)) {
       return;
     }
 
