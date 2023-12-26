@@ -28,6 +28,12 @@ brew tap ruimarinho/tap
 brew install gsts
 ```
 
+### nix flakes
+
+```shell
+nix shell github:ruimarinho/gsts
+```
+
 ### Other Platforms
 
 Install the package via `npm`:
