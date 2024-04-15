@@ -52,6 +52,11 @@ export function generateCliParameters(paths) {
       required: true,
       awsConfigKey: 'gsts.idp_id'
     },
+    'list-available-roles': {
+      description: 'List available roles and exit',
+      type: 'boolean',
+      default: false,
+    },
     'no-credentials-cache': {
       description: 'Disable default behaviour of storing credentials in --cache-dir',
       type: 'boolean'

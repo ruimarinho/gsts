@@ -97,7 +97,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
     await trash(paths.data);
   }
 
-  if (!argv.headful) {
+  if (!argv.headful && !argv.listAvailableRoles) {
    logger.start('Logging in');
   }
 
@@ -145,6 +145,20 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
 
       try {
         let { availableRoles, roleToAssume, samlAssertion } = await credentialsManager.prepareRoleWithSAML(route.request().postDataJSON(), argv.awsRoleArn);
+
+        if (argv.listAvailableRoles) {
+          if (argv.output === 'json') {
+            process.stdout.write(JSON.stringify(availableRoles));
+          } else {
+            for (let role of availableRoles) {
+              process.stdout.write(role.roleArn+"\n");
+            }
+          }
+
+          logger.stop();
+          await context.close();
+          return;
+        }
 
         if (!roleToAssume && availableRoles.length > 1) {
           logger.stop();
