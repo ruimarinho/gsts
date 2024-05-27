@@ -14,7 +14,7 @@ import { format as formatOutput } from './formatter.js';
 import { hideBin } from 'yargs/helpers';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
-import { openApp } from 'open';
+import openUrl from 'open';
 import envpaths from 'env-paths';
 import playwright from 'playwright';
 import prompts from 'prompts';
@@ -88,7 +88,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
   if (argv._[0] === 'console') {
     logger.debug('Opening url %s', SAML_URL);
 
-    return await openApp(SAML_URL);
+    return await openUrl(SAML_URL);
   }
 
   if (argv.clean) {
