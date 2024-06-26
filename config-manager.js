@@ -59,7 +59,7 @@ export async function processConfig(cliParameters, argv, env, isTTY) {
       }
 
       // Normalize into yargs structure.
-      argv[parameterKey] = argv[camalize(parameterKey)];
+      argv[camalize(parameterKey)] = argv[parameterKey];
     }
   }
 
