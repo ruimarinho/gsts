@@ -103,7 +103,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
 
   let isAuthenticated = false;
 
-  if (!argv.headful && argv['credentials-cache'] && !argv.force) {
+  if (!argv.headful && argv['credentials-cache'] && !argv.force && !argv.listAvailableRoles) {
     try {
       let session = await credentialsManager.loadCredentials(argv.awsProfile, argv.awsRoleArn);
 
