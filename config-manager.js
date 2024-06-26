@@ -43,6 +43,9 @@ export async function processConfig(cliParameters, argv, env, isTTY) {
     if (argv[parameterKey] === undefined || argv[parameterKey] === cliParameters[parameterKey].default) {
       // Read value from `aws` cli profile configuration settings.
       const value = awsConfig.configFile[argv.awsProfile]?.[cliParameters[parameterKey].awsConfigKey];
+      if (value === undefined) {
+        continue;
+      }
       // Get expected value type.
       const type = cliParameters[parameterKey]?.type;
       // Coerce into expected value type.
