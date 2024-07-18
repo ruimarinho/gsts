@@ -238,7 +238,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
     // Requests tagged with this specific error were made by gsts and should result
     // in a program termination.
     if (request.failure().errorText === 'net::ERR_BLOCKED_BY_CLIENT') {
-      logger.debug(`Request to "${request.url()}" has has been successfully blocked`);
+      logger.debug(`Request to "${request.url()}" has been successfully blocked`);
       await context.close();
       logger.debug(`Closed context of "${request.url()}"`);
       return;
