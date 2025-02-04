@@ -155,11 +155,7 @@ const credentialsManager = new CredentialsManager(
   }
 
   try {
-    const { stdout, stderr } = await exec("pnpx", [
-      "playwright",
-      "install",
-      argv.playwrightEngine ?? "firefox",
-    ]);
+    const { stdout, stderr } = await exec(`pnpx playwright install ${argv.playwrightEngine ?? "firefox"}`);
     logger.debug(stdout);
     logger.debug(stderr);
   } catch (e) {
