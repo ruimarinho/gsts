@@ -159,8 +159,7 @@ const credentialsManager = new CredentialsManager(
     logger.debug(stdout);
     logger.debug(stderr);
   } catch (e) {
-    logger.error("gsts.auto_install_browser_error", e);
-    process.exit(1);
+    logger.warn("gsts.auto_install_browser_error: Try running `canary aws local-access-setup`", e);
   }
 
   const playwrightOptions = {
