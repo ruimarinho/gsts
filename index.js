@@ -4,34 +4,34 @@
  * Module dependencies.
  */
 
-import * as configManager from './config-manager.js';
-import { CredentialsManager } from './credentials-manager.js';
-import { Logger, PLAYWRIGHT_LOG_LEVELS } from './logger.js';
-import { ProfileNotFoundError, RoleNotFoundError } from './errors.js';
-import { generateCliParameters } from './parameters.js';
-import { fileURLToPath, parse as urlparse } from 'node:url';
-import { format as formatOutput } from './formatter.js';
-import { hideBin } from 'yargs/helpers';
-import { join } from 'node:path';
-import os from 'node:os';
-import { spawn } from 'node:child_process';
-import child_process from 'node:child_process';
-import { writeFile, mkdir } from 'node:fs/promises';
-import openUrl from 'open';
-import envpaths from 'env-paths';
-import playwright from 'playwright';
-import prompts from 'prompts';
-import trash from 'trash';
-import yargs from 'yargs';
+import * as configManager from "./config-manager.js";
+import { CredentialsManager } from "./credentials-manager.js";
+import { Logger, PLAYWRIGHT_LOG_LEVELS } from "./logger.js";
+import { ProfileNotFoundError, RoleNotFoundError } from "./errors.js";
+import { generateCliParameters } from "./parameters.js";
+import { fileURLToPath, parse as urlparse } from "node:url";
+import { format as formatOutput } from "./formatter.js";
+import { hideBin } from "yargs/helpers";
+import { join } from "node:path";
+import { spawn } from "node:child_process";
+import { promisify } from "node:util";
+import child_process from "node:child_process";
+import { writeFile, mkdir } from "node:fs/promises";
+import openUrl from "open";
+import envpaths from "env-paths";
+import playwright from "playwright";
+import prompts from "prompts";
+import trash from "trash";
+import yargs from "yargs";
 
-const paths = envpaths('gsts', { suffix: '' });
+const paths = envpaths("gsts", { suffix: "" });
 const exec = promisify(child_process.exec);
 
 /**
  * Always return control to the terminal in case an unhandled rejection occurs.
  */
 
-process.on('unhandledRejection', e => {
+process.on("unhandledRejection", (e) => {
   logger.stop();
   logger.error(e);
   process.exit(1);
@@ -54,16 +54,23 @@ const cliParameters = generateCliParameters(paths);
  */
 
 const argv = await yargs(hideBin(process.argv))
-  .usage('gsts')
+  .usage("gsts")
   .middleware(async (argv) => {
-    return configManager.processConfig(cliParameters, argv, process.env, process.stdout.isTTY);
+    return configManager.processConfig(
+      cliParameters,
+      argv,
+      process.env,
+      process.stdout.isTTY
+    );
   }, true)
-  .env('GSTS')
-  .command('console', 'Authenticate via SAML and open Amazon AWS console in the default browser')
+  .env("GSTS")
+  .command(
+    "console",
+    "Authenticate via SAML and open Amazon AWS console in the default browser"
+  )
   .options(cliParameters)
   .strictCommands()
-  .wrap(150)
-  .argv;
+  .wrap(150).argv;
 
 /**
  * Custom logger instance to support `-v` or `--verbose` output and non-TTY
@@ -82,7 +89,11 @@ const SAML_URL = `https://accounts.google.com/o/saml2/initsso?idpid=${argv.idpId
  * Create instance of CredentialsManager with logger.
  */
 
-const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['credentials-cache'] ? argv.cacheDir : null);
+const credentialsManager = new CredentialsManager(
+  logger,
+  argv.awsRegion,
+  argv["credentials-cache"] ? argv.cacheDir : null
+);
 
 /**
  * Main execution routine which handles command-line flags.
@@ -95,51 +106,64 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
     cacheDir: ${argv.cacheDir}
     Browser data dir: ${paths.data}`);
 
-  if (argv._[0] === 'console') {
-    logger.debug('Opening url %s', SAML_URL);
+  if (argv._[0] === "console") {
+    logger.debug("Opening url %s", SAML_URL);
 
     return await openUrl(SAML_URL);
   }
 
   if (argv.clean) {
-    logger.debug('Cleaning directory %s', paths.data)
+    logger.debug("Cleaning directory %s", paths.data);
 
     await trash(paths.data);
   }
 
   if (!argv.headful) {
-   logger.start('Logging in');
+    logger.start("Logging in");
   }
 
   let isAuthenticated = false;
 
-  if (!argv.headful && argv['credentials-cache'] && !argv.force) {
+  if (!argv.headful && argv["credentials-cache"] && !argv.force) {
     try {
-      let session = await credentialsManager.loadCredentials(argv.awsProfile, argv.awsRoleArn);
+      let session = await credentialsManager.loadCredentials(
+        argv.awsProfile,
+        argv.awsRoleArn
+      );
 
       if (session.isValid()) {
-        logger.info('Session is valid until %s. Use --force to ignore', session.expiresAt);
+        logger.info(
+          "Session is valid until %s. Use --force to ignore",
+          session.expiresAt
+        );
         logger.stop();
 
         process.stdout.write(formatOutput(session, argv.output));
         return;
       } else {
-        logger.info('Session has expired on %s, refreshing credentials...', session.expiresAt);
+        logger.info(
+          "Session has expired on %s, refreshing credentials...",
+          session.expiresAt
+        );
       }
     } catch (e) {
       // Credentials file may not yet exist or not contain session information for the requested profile.
-      if (e.code !== 'ENOENT' && !(e instanceof ProfileNotFoundError)) {
+      if (e.code !== "ENOENT" && !(e instanceof ProfileNotFoundError)) {
         throw e;
       }
     }
   }
-  
+
   try {
-    const { stdout, stderr } = await exec("pnpx", ["playwright", "install", argv.playwrightEngine]);
+    const { stdout, stderr } = await exec("pnpx", [
+      "playwright",
+      "install",
+      argv.playwrightEngine,
+    ]);
     logger.debug(stdout);
     logger.debug(stderr);
   } catch (e) {
-    logger.error('gsts.auto_install_browser_error', e);
+    logger.error("gsts.auto_install_browser_error", e);
     process.exit(1);
   }
 
@@ -148,34 +172,51 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
     userDataDir: paths.data,
     logger: {
       isEnabled: () => argv.verbose >= 3,
-      log: (name, severity, message, args) => logger[PLAYWRIGHT_LOG_LEVELS[severity]](`Playwright: ${name} ${message}`, args)
+      log: (name, severity, message, args) =>
+        logger[PLAYWRIGHT_LOG_LEVELS[severity]](
+          `Playwright: ${name} ${message}`,
+          args
+        ),
     },
     channel: argv.playwrightEngineChannel,
     executablePath: argv.playwrightEngineExecutablePath,
   };
 
-  const context = await playwright[argv.playwrightEngine].launchPersistentContext(join(paths.data, argv.playwrightEngine), playwrightOptions);
+  const context = await playwright[
+    argv.playwrightEngine
+  ].launchPersistentContext(
+    join(paths.data, argv.playwrightEngine),
+    playwrightOptions
+  );
   const page = await context.newPage();
   page.setDefaultTimeout(0);
 
-  await page.route('**/*', async (route) => {
-    if (route.request().url() === 'https://signin.aws.amazon.com/saml') {
+  await page.route("**/*", async (route) => {
+    if (route.request().url() === "https://signin.aws.amazon.com/saml") {
       isAuthenticated = true;
 
       try {
-        let { availableRoles, roleToAssume, samlAssertion } = await credentialsManager.prepareRoleWithSAML(route.request().postDataJSON(), argv.awsRoleArn);
-        logger.debug('availableRoles', availableRoles);
+        let { availableRoles, roleToAssume, samlAssertion } =
+          await credentialsManager.prepareRoleWithSAML(
+            route.request().postDataJSON(),
+            argv.awsRoleArn
+          );
+        logger.debug("availableRoles", availableRoles);
 
-        const rolesFile = join(argv.cacheDir, 'roles.json');
-        logger.info('Dumping roles to %s', rolesFile);
+        const rolesFile = join(argv.cacheDir, "roles.json");
+        logger.info("Dumping roles to %s", rolesFile);
         await writeFile(rolesFile, JSON.stringify(availableRoles, null, 2));
         if (argv.dumpRolesOnly && !roleToAssume) {
           // We still want to continue with the process
           // so cache can be populated correctly.
-          roleToAssume = availableRoles.find(role => role.roleArn.toLowerCase().includes('localdeveloper'));
+          roleToAssume = availableRoles.find((role) =>
+            role.roleArn.toLowerCase().includes("localdeveloper")
+          );
           // temporarily override AWS_PROFILE also otherwise it will be mismatched with roleToAssume.name
           process.env.AWS_PROFILE = roleToAssume.name;
-          logger.info(`Dumping role only is set without a role ARN, use developer role ${roleToAssume}`);
+          logger.info(
+            `Dumping role only is set without a role ARN, use developer role ${roleToAssume}`
+          );
         }
 
         if (!roleToAssume && availableRoles.length > 1) {
@@ -183,32 +224,44 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
 
           if (process.stdout.isTTY) {
             const choices = availableRoles.reduce((accumulator, role) => {
-              accumulator.push({ title: role.roleArn })
+              accumulator.push({ title: role.roleArn });
               return accumulator;
             }, []);
 
             const response = await prompts({
-              type: 'select',
-              name: 'arn',
-              message: 'Select a role to authenticate with:',
-              choices
+              type: "select",
+              name: "arn",
+              message: "Select a role to authenticate with:",
+              choices,
             });
 
-            if (!response.hasOwnProperty('arn')) {
-              logger.error('You must choose one of the available role ARNs to authenticate or, alternatively, set one directly using the --aws-role-arn option');
+            if (!response.hasOwnProperty("arn")) {
+              logger.error(
+                "You must choose one of the available role ARNs to authenticate or, alternatively, set one directly using the --aws-role-arn option"
+              );
               route.abort();
               return;
             }
 
             roleToAssume = availableRoles[response.arn];
 
-            logger.info(`You may skip this step by invoking gsts with --aws-role-arn=${roleToAssume.roleArn}`);
+            logger.info(
+              `You may skip this step by invoking gsts with --aws-role-arn=${roleToAssume.roleArn}`
+            );
           } else {
-            logger.debug(`Assuming role "${roleToAssume.roleArn}" from the list of available roles %o due to non-interactive mode`, availableRoles);
+            logger.debug(
+              `Assuming role "${roleToAssume.roleArn}" from the list of available roles %o due to non-interactive mode`,
+              availableRoles
+            );
           }
         }
 
-        const session = await credentialsManager.assumeRoleWithSAML(samlAssertion, roleToAssume, argv.awsProfile, argv.awsSessionDuration);
+        const session = await credentialsManager.assumeRoleWithSAML(
+          samlAssertion,
+          roleToAssume,
+          argv.awsProfile,
+          argv.awsSessionDuration
+        );
 
         logger.debug(`Initiating request to "${route.request().url()}"`);
 
@@ -218,34 +271,44 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
         // before redirecting to the console. If we see this form, then we know we
         // are logged in.
         if (availableRoles.length > 1) {
-          await page.waitForSelector('#saml_form');
+          await page.waitForSelector("#saml_form");
           await context.close();
         }
 
-        logger.succeed('Login successful!');
+        logger.succeed("Login successful!");
 
         process.stdout.write(formatOutput(session, argv.output));
       } catch (e) {
         // Passthrough STSServiceException from AWS SDK.
-        if (e.Code === 'ValidationError') {
+        if (e.Code === "ValidationError") {
           throw e;
         }
 
-        logger.debug('An error has ocurred while authenticating', e);
+        logger.debug("An error has ocurred while authenticating", e);
 
         if (e instanceof RoleNotFoundError) {
-          logger.error(`Role ARN "${argv.awsRoleArn}" not found in the list of available roles ${JSON.stringify(e.roles)}`);
+          logger.error(
+            `Role ARN "${
+              argv.awsRoleArn
+            }" not found in the list of available roles ${JSON.stringify(
+              e.roles
+            )}`
+          );
           route.abort();
           return;
         }
 
-        if (['ValidationError', 'InvalidIdentityToken'].includes(e.code)) {
-          logger.error(`A remote error ocurred while assuming role: ${e.message}`);
+        if (["ValidationError", "InvalidIdentityToken"].includes(e.code)) {
+          logger.error(
+            `A remote error ocurred while assuming role: ${e.message}`
+          );
           route.abort();
           return;
         }
 
-        logger.error(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
+        logger.error(
+          `An unknown error has ocurred with message "${e.message}". Please try again with --verbose`
+        );
         route.abort();
         return;
       }
@@ -253,7 +316,11 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
       return;
     }
 
-    if (/google|gstatic|youtube|googleusercontent|googleapis|gvt1|okta/.test(route.request().url())) {
+    if (
+      /google|gstatic|youtube|googleusercontent|googleapis|gvt1|okta/.test(
+        route.request().url()
+      )
+    ) {
       logger.debug(`Allowing request to "${route.request().url()}"`);
       route.continue();
       return;
@@ -263,26 +330,37 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
 
     // Abort with a specific error so we can tag these requests as being blocked by gsts
     // instead of a configuration issue (like a custom ARN not being available).
-    route.abort('blockedbyclient');
+    route.abort("blockedbyclient");
   });
 
-  page.on('requestfailed', async request => {
+  page.on("requestfailed", async (request) => {
     // Requests tagged with this specific error were made by gsts and should result
     // in a program termination.
-    if (request.failure().errorText === 'net::ERR_BLOCKED_BY_CLIENT') {
-      logger.debug(`Request to "${request.url()}" has been successfully blocked`);
+    if (request.failure().errorText === "net::ERR_BLOCKED_BY_CLIENT") {
+      logger.debug(
+        `Request to "${request.url()}" has been successfully blocked`
+      );
       await context.close();
       logger.debug(`Closed context of "${request.url()}"`);
       return;
     }
 
-    logger.debug(`Request to "${request.url()}" has failed with ${request.failure().errorText}`);
+    logger.debug(
+      `Request to "${request.url()}" has failed with ${
+        request.failure().errorText
+      }`
+    );
 
     // The request to the AWS console is aborted on successful login for performance reasons,
     // so in this particular case it's actually an expected outcome.
     const parsedURL = urlparse(request.url());
-    if (parsedURL.host.endsWith('console.aws.amazon.com') && parsedURL.pathname === '/console/home') {
-      logger.debug(`Request to "${request.url()}" matches AWS console which means authentication was successful`);
+    if (
+      parsedURL.host.endsWith("console.aws.amazon.com") &&
+      parsedURL.pathname === "/console/home"
+    ) {
+      logger.debug(
+        `Request to "${request.url()}" matches AWS console which means authentication was successful`
+      );
 
       await context.close();
       return;
@@ -290,20 +368,26 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
   });
 
   try {
-    const ssoPage = await page.goto(SAML_URL, { waitUntil: 'load' })
+    const ssoPage = await page.goto(SAML_URL, { waitUntil: "load" });
 
     if (!ssoPage.ok()) {
-      throw new Error(`Got status code "${ssoPage.status()}" while requesting "${SAML_URL}"`);
+      throw new Error(
+        `Got status code "${ssoPage.status()}" while requesting "${SAML_URL}"`
+      );
     }
 
     if (/ServiceLogin|InteractiveLogin|AccountChooser/.test(ssoPage.url())) {
       if (!isAuthenticated && !argv.headful) {
-        logger.warn('User is not authenticated, spawning headful instance');
+        logger.warn("User is not authenticated, spawning headful instance");
 
-        const args = [fileURLToPath(import.meta.url), '--headful', ...process.argv.slice(2)];
-        const ui = spawn(process.execPath, args, { stdio: 'inherit' });
+        const args = [
+          fileURLToPath(import.meta.url),
+          "--headful",
+          ...process.argv.slice(2),
+        ];
+        const ui = spawn(process.execPath, args, { stdio: "inherit" });
 
-        ui.on('close', code => {
+        ui.on("close", (code) => {
           logger.debug(`Headful instance has exited with code ${code}`);
         });
 
@@ -313,11 +397,15 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
   } catch (e) {
     // The request to the AWS console is aborted on successful login for performance reasons,
     // so in this particular case closing the browser instance is actually an expected outcome.
-    if (/browser has disconnected/.test(e.message) || /browser has been closed/.test(e.message) || /Navigation failed because page was closed/.test(e.message)) {
+    if (
+      /browser has disconnected/.test(e.message) ||
+      /browser has been closed/.test(e.message) ||
+      /Navigation failed because page was closed/.test(e.message)
+    ) {
       return;
     }
 
-    logger.debug('Error caught while browsing to the initsso page', e);
+    logger.debug("Error caught while browsing to the initsso page", e);
     throw e;
   }
 
@@ -326,18 +414,20 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
       if (argv.username) {
         logger.debug(`Pre-filling email with ${argv.username}`);
 
-        await page.fill('input[type=email]', argv.username)
+        await page.fill("input[type=email]", argv.username);
       }
 
-      await page.waitForResponse('https://signin.aws.amazon.com/saml');
+      await page.waitForResponse("https://signin.aws.amazon.com/saml");
     } catch (e) {
       if (/Target closed/.test(e.message)) {
-        logger.debug('Browser closed outside running context, exiting');
+        logger.debug("Browser closed outside running context, exiting");
         return;
       }
 
-      logger.debug('Error while authenticating in headful mode', e);
-      logger.error(`An unknown error has ocurred with message "${e.message}". Please try again with --verbose`)
+      logger.debug("Error while authenticating in headful mode", e);
+      logger.error(
+        `An unknown error has ocurred with message "${e.message}". Please try again with --verbose`
+      );
       process.exit(1);
     }
   }
