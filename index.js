@@ -9,7 +9,7 @@ import { CredentialsManager } from './credentials-manager.js';
 import { Logger, PLAYWRIGHT_LOG_LEVELS } from './logger.js';
 import { ProfileNotFoundError, RoleNotFoundError } from './errors.js';
 import { generateCliParameters } from './parameters.js';
-import { fileURLToPath, parse as urlparse } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { format as formatOutput } from './formatter.js';
 import { hideBin } from 'yargs/helpers';
 import { join } from 'node:path';
@@ -248,7 +248,7 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
 
     // The request to the AWS console is aborted on successful login for performance reasons,
     // so in this particular case it's actually an expected outcome.
-    const parsedURL = urlparse(request.url());
+    const parsedURL = new URL(request.url());
     if (parsedURL.host.endsWith('console.aws.amazon.com') && parsedURL.pathname === '/console/home') {
       logger.debug(`Request to "${request.url()}" matches AWS console which means authentication was successful`);
 
