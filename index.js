@@ -299,7 +299,8 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
 
       await page.waitForResponse('https://signin.aws.amazon.com/saml');
     } catch (e) {
-      if (/Target closed/.test(e.message)) {
+      // Newer Playwright: "Target page, context or browser has been closed".
+      if (/Target closed|has been closed/.test(e.message)) {
         logger.debug('Browser closed outside running context, exiting');
         return;
       }
