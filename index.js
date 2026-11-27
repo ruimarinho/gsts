@@ -178,6 +178,11 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
 
         const session = await credentialsManager.assumeRoleWithSAML(samlAssertion, roleToAssume, argv.awsProfile, argv.awsSessionDuration);
 
+        // Print before continuing; the browser may close at any point after.
+        logger.succeed('Login successful!');
+
+        process.stdout.write(formatOutput(session, argv.output));
+
         logger.debug(`Initiating request to "${route.request().url()}"`);
 
         route.continue();
@@ -186,13 +191,13 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
         // before redirecting to the console. If we see this form, then we know we
         // are logged in.
         if (availableRoles.length > 1) {
-          await page.waitForSelector('#saml_form');
-          await context.close();
+          try {
+            await page.waitForSelector('#saml_form');
+            await context.close();
+          } catch (e) {
+            logger.debug('Browser closed while waiting for the role selection form', e);
+          }
         }
-
-        logger.succeed('Login successful!');
-
-        process.stdout.write(formatOutput(session, argv.output));
       } catch (e) {
         // Passthrough STSServiceException from AWS SDK.
         if (e.Code === 'ValidationError') {
@@ -299,7 +304,8 @@ const credentialsManager = new CredentialsManager(logger, argv.awsRegion, argv['
 
       await page.waitForResponse('https://signin.aws.amazon.com/saml');
     } catch (e) {
-      if (/Target closed/.test(e.message)) {
+      // Newer Playwright: "Target page, context or browser has been closed".
+      if (/Target closed|has been closed/.test(e.message)) {
         logger.debug('Browser closed outside running context, exiting');
         return;
       }
